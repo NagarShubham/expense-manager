@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing -->
+    <dimen name="spacing_tiny">4.dp</dimen>
+    <dimen name="spacing_small">8.dp</dimen>
+    <dimen name="spacing_medium">12.dp</dimen>
+    <dimen name="spacing_default">16.dp</dimen>
+    <dimen name="spacing_xlarge">24.dp</dimen>
+    <dimen name="spacing_xxlarge">32.dp</dimen>
+    
+    <!-- Card Elevation -->
+    <dimen name="card_elevation_default">2.dp</dimen>
+    <dimen name="card_elevation_raised">4.dp</dimen>
+    
+    <!-- Icon Sizes -->
+    <dimen name="icon_size_large">48.dp</dimen>
+    
+    <!-- Component Heights -->
+    <dimen name="button_height_default">56.dp</dimen>
+    <dimen name="text_field_height_multiline">120.dp</dimen>
+</resources>
+
