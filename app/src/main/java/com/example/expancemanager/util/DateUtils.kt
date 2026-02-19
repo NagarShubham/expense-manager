@@ -5,6 +5,22 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 object DateUtils {
+    /**
+     * Returns (month, year) for the month that is [increment] months from the given month/year.
+     * e.g. adjacentMonth(0, 2024, 1) -> (1, 2024), adjacentMonth(11, 2024, 1) -> (0, 2025).
+     */
+    fun adjacentMonth(
+        month: Int,
+        year: Int,
+        increment: Int
+    ): Pair<Int, Int> {
+        val calendar = Calendar.getInstance().apply {
+            set(year, month, 1)
+            add(Calendar.MONTH, increment)
+        }
+        return calendar.get(Calendar.MONTH) to calendar.get(Calendar.YEAR)
+    }
+
     // Thread-safe formatters using ThreadLocal
     private val dateFormat = ThreadLocal.withInitial {
         SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())

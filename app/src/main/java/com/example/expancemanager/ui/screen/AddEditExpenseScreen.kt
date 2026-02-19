@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ fun AddEditExpenseScreen(
     viewModel: ExpenseViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val categories = rememberCategories()
     var title by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
@@ -43,7 +45,7 @@ fun AddEditExpenseScreen(
 
     val scope = rememberCoroutineScope()
     val isEditMode = expenseId != null
-    val isValid = title.isNotBlank() && amount.toDoubleOrNull()?.let { it > 0 } == true
+    val isValid = title.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
 
     // Load expense if editing
     LaunchedEffect(expenseId) {
@@ -129,7 +131,7 @@ fun AddEditExpenseScreen(
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     leadingIcon = {
                         Text(
-                            text = ExpenseCategories.getCategoryEmoji(category),
+                            text = ExpenseCategories.getCategoryEmoji(context, category),
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
@@ -139,21 +141,23 @@ fun AddEditExpenseScreen(
                     onDismissRequest = { showCategoryMenu = false }
                 ) {
                     categories.forEach { cat ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = ExpenseCategories.getCategoryEmoji(cat),
-                                        modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_small))
-                                    )
-                                    Text(cat)
+                        key(cat) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = ExpenseCategories.getCategoryEmoji(context, cat),
+                                            modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_small))
+                                        )
+                                        Text(cat)
+                                    }
+                                },
+                                onClick = {
+                                    category = cat
+                                    showCategoryMenu = false
                                 }
-                            },
-                            onClick = {
-                                category = cat
-                                showCategoryMenu = false
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -244,26 +248,17 @@ fun AddEditExpenseScreen(
     // Date picker dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
-
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { selectedDate = it }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text(stringResource(R.string.action_ok))
-                }
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate = it }
+                    showDatePicker = false
+                }) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 }

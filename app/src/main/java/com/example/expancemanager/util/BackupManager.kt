@@ -1,6 +1,6 @@
 package com.example.expancemanager.util
 
-import android.content.Context
+import android.app.Application
 import android.net.Uri
 import com.example.expancemanager.data.Expense
 import com.google.gson.Gson
@@ -11,13 +11,15 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
 
 /**
  * Manages backup and restore operations for expense data
  * Exports data as JSON files and imports from JSON files
  */
-object BackupManager {
+class BackupManager @Inject constructor(private val application: Application) {
     private val gson: Gson = GsonBuilder()
         .setPrettyPrinting()
         .create()
@@ -34,16 +36,11 @@ object BackupManager {
 
     /**
      * Exports expenses to a JSON file
-     * @param context Application context
      * @param uri URI where to save the backup file
      * @param expenses List of expenses to export
      * @return Result indicating success or failure
      */
-    suspend fun exportToJson(
-        context: Context,
-        uri: Uri,
-        expenses: List<Expense>
-    ): Result<String> =
+    suspend fun exportToJson(uri: Uri, expenses: List<Expense>): Result<String> =
         withContext(Dispatchers.IO) {
             try {
                 val backupData = BackupData(
@@ -53,7 +50,7 @@ object BackupManager {
 
                 val jsonString = gson.toJson(backupData)
 
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                application.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(jsonString.toByteArray())
                     outputStream.flush()
                 } ?: return@withContext Result.failure(Exception("Unable to open output stream"))
@@ -66,17 +63,13 @@ object BackupManager {
 
     /**
      * Imports expenses from a JSON file
-     * @param context Application context
      * @param uri URI of the backup file to import
      * @return Result containing list of expenses or error
      */
-    suspend fun importFromJson(
-        context: Context,
-        uri: Uri
-    ): Result<List<Expense>> =
+    suspend fun importFromJson(uri: Uri): Result<List<Expense>> =
         withContext(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonString = application.contentResolver.openInputStream(uri)?.use { inputStream ->
                     BufferedReader(InputStreamReader(inputStream)).use { reader ->
                         reader.readText()
                     }
@@ -106,17 +99,13 @@ object BackupManager {
 
     /**
      * Validates if a backup file is valid
-     * @param context Application context
      * @param uri URI of the file to validate
      * @return Result indicating if the file is valid
      */
-    suspend fun validateBackupFile(
-        context: Context,
-        uri: Uri
-    ): Result<Int> =
+    suspend fun validateBackupFile(uri: Uri): Result<Int> =
         withContext(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonString = application.contentResolver.openInputStream(uri)?.use { inputStream ->
                     BufferedReader(InputStreamReader(inputStream)).use { reader ->
                         reader.readText()
                     }

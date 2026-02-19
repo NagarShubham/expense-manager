@@ -1,12 +1,20 @@
 package com.example.expancemanager.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExpenseDao {
-    @Query("SELECT * FROM expenses ORDER BY date DESC")
+    @Query("SELECT * FROM expenses")
     fun getAllExpenses(): Flow<List<Expense>>
+
+    @Query("SELECT COUNT(*) FROM expenses")
+    fun getExpenseCount(): Flow<Int>
 
     @Query("SELECT * FROM expenses WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     fun getExpensesByDateRange(

@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +31,7 @@ fun CategoryExpensesScreen(
     onNavigateBack: () -> Unit = {},
     onExpenseClick: (Long) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
     // Filter expenses by category
@@ -91,7 +93,7 @@ fun CategoryExpensesScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = ExpenseCategories.getCategoryEmoji(category),
+                        text = ExpenseCategories.getCategoryEmoji(context, category),
                         fontSize = 48.sp
                     )
                     Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
@@ -122,7 +124,7 @@ fun CategoryExpensesScreen(
             // Expenses list
             if (categoryExpenses.isEmpty()) {
                 EmptyStateMessage(
-                    emoji = ExpenseCategories.getCategoryEmoji(category),
+                    emoji = ExpenseCategories.getCategoryEmoji(context, category),
                     title = stringResource(R.string.category_empty_title),
                     subtitle = stringResource(R.string.category_empty_subtitle, category)
                 )

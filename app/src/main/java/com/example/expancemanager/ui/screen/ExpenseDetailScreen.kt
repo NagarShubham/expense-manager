@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,12 +34,11 @@ fun ExpenseDetailScreen(
     onNavigateBack: () -> Unit = {},
     onEditExpense: (Long) -> Unit = {}
 ) {
+    val context = LocalContext.current
     var expense by remember { mutableStateOf<Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(expenseId) {
-        expense = viewModel.getExpenseById(expenseId)
-    }
+    LaunchedEffect(expenseId) { expense = viewModel.getExpenseById(expenseId) }
 
     Scaffold(
         topBar = {
@@ -86,7 +86,7 @@ fun ExpenseDetailScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = ExpenseCategories.getCategoryEmoji(exp.category),
+                        text = ExpenseCategories.getCategoryEmoji(context, exp.category),
                         fontSize = 48.sp
                     )
                 }
@@ -120,10 +120,7 @@ fun ExpenseDetailScreen(
                     }
                 }
             }
-        } ?: Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
+        } ?: Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     }

@@ -25,7 +25,39 @@
     <string name="home_view_all_categories">View All %d Categories</string>
     <string name="home_empty_title">No expenses yet</string>
     <string name="home_empty_subtitle">Tap the + button to add your first expense</string>
-    
+    <string name="home_empty_emoji">📊</string>
+    <string name="budget_expected">Expected</string>
+    <string name="budget_used">Used</string>
+    <string name="budget_remaining">Remaining</string>
+    <string name="budget_overspent">Overspent by</string>
+    <string name="budget_summary_left">%1$s left of %2$s budget</string>
+    <string name="budget_summary_over">%1$s over budget</string>
+    <string name="budget_summary_used_of">Used %1$s of %2$s</string>
+    <string name="budget_status_on_track">On track</string>
+    <string name="budget_status_over">Over budget</string>
+    <string name="budget_percent_used">%1$d%% of budget</string>
+    <string name="budget_set_budget">Set monthly budget</string>
+    <string name="budget_edit_budget">Edit budget</string>
+    <string name="budget_dialog_title">Expected monthly expense</string>
+    <string name="budget_dialog_hint">Amount</string>
+    <string name="budget_dialog_save">Save</string>
+    <string name="cd_set_budget">Set monthly budget</string>
+    <string name="budget_screen_title">Monthly budget</string>
+    <string name="budget_month">Month</string>
+    <string name="budget_year">Year</string>
+    <string name="budget_clear">Clear budget</string>
+    <string name="budget_saved">Budget saved</string>
+    <string name="budget_cleared">Budget cleared</string>
+    <string name="budget_invalid_amount">Enter a valid amount</string>
+    <string name="budget_excluded_categories_title">Exclude from budget</string>
+    <string name="budget_excluded_categories_subtitle">These categories won\'t count toward \"Used\" or progress. They still appear in expenses and breakdown.</string>
+    <string name="budget_categories_excluded_hint">Excluding %d categories from budget</string>
+
+    <!-- Settings - Budget -->
+    <string name="settings_budget_section">Budget</string>
+    <string name="settings_budget_title">Set or edit monthly budget</string>
+    <string name="settings_budget_subtitle">Choose a month and year, then set your expected expense. You can edit or clear it anytime.</string>
+
     <!-- Add/Edit Expense Screen -->
     <string name="expense_add_title">Add Expense</string>
     <string name="expense_edit_title">Edit Expense</string>
@@ -85,7 +117,16 @@
     <string name="settings_import_confirm_replace">This will delete all existing expenses and replace them with data from the backup file. This action cannot be undone.</string>
     <string name="settings_import_confirm_merge">The expenses from the backup file will be added to your existing data. Duplicate expenses may be created.</string>
     <string name="settings_import_confirm_button">Import</string>
-    
+    <string name="settings_actions_label">Actions</string>
+    <string name="settings_export_success_default">Export successful</string>
+    <string name="settings_export_failed">Export failed: %1$s</string>
+    <string name="settings_import_success">Successfully imported %d expenses</string>
+    <string name="settings_import_failed">Import failed: %1$s</string>
+    <string name="settings_export_count_message">📦 %d expenses will be exported</string>
+    <string name="settings_backup_expense_count">%d expenses in your database</string>
+    <string name="settings_import_replace_warning">⚠️ Will delete all current data</string>
+    <string name="settings_import_deleted_warning">⚠️ %d current expenses will be deleted</string>
+
     <!-- Expense Categories -->
     <string name="category_bills_utilities">Bills &amp; Utilities</string>
     <string name="category_transportation">Transportation</string>

@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -151,6 +152,7 @@ fun CategoryTotalCard(
     totalAmount: Double,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val percentage = remember(categoryTotal.total, totalAmount) {
         if (totalAmount > 0) (categoryTotal.total / totalAmount * 100).toInt() else 0
     }
@@ -174,7 +176,7 @@ fun CategoryTotalCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = ExpenseCategories.getCategoryEmoji(categoryTotal.category),
+                    text = ExpenseCategories.getCategoryEmoji(context, categoryTotal.category),
                     fontSize = 32.sp,
                     modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_medium))
                 )

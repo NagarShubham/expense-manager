@@ -6,37 +6,45 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.expancemanager.R
 
 object ExpenseCategories {
-    private val categoryEmojiMap = mapOf(
-        "Bills & Utilities" to "💡",
-        "Transportation" to "🚗",
-        "Food & Dining" to "🍔",
-        "Personal Care" to "💆",
-        "EMI" to "💳",
-        "Baby" to "👶",
-        "Groceries" to "🛒",
-        "Investments" to "📈",
-        "Travel" to "✈️",
-        "Shopping" to "🛍️",
-        "Entertainment" to "🎬",
-        "Healthcare" to "🏥",
-        "Education" to "📚",
-        "Rent" to "🏠",
-        "Insurance" to "🛡️",
-        "Gifts" to "🎁",
-        "Other" to "💰"
+    /**
+     * Emojis in the same order as [R.array.expense_categories], so lookup by index
+     * works correctly for any locale (categories are stored as localized strings).
+     */
+    private val categoryEmojisByIndex = listOf(
+        "💡", // Bills & Utilities
+        "🚗", // Transportation
+        "🍔", // Food & Dining
+        "💆", // Personal Care
+        "💳", // EMI
+        "👶", // Baby
+        "🛒", // Groceries
+        "📈", // Investments
+        "✈️", // Travel
+        "🛍️", // Shopping
+        "🎬", // Entertainment
+        "🏥", // Healthcare
+        "📚", // Education
+        "🏠", // Rent
+        "🛡️", // Insurance
+        "🎁", // Gifts
+        "💰" // Other
     )
+
+    private const val FALLBACK_EMOJI = "💰"
 
     fun getCategories(context: Context): List<String> = context.resources.getStringArray(R.array.expense_categories).toList()
 
     /**
-     * Get the emoji icon for a category
-     * Emojis are universal and don't need localization
+     * Returns the emoji for the given category name.
+     * Uses the same order as [getCategories] so it works for any locale.
      */
-    fun getCategoryEmoji(category: String): String {
-        categoryEmojiMap[category]?.let { return it }
-        return categoryEmojiMap.values.elementAtOrNull(
-            categoryEmojiMap.keys.indexOf(category)
-        ) ?: "💰"
+    fun getCategoryEmoji(
+        context: Context,
+        category: String
+    ): String {
+        val categories = getCategories(context)
+        val index = categories.indexOf(category)
+        return if (index in categoryEmojisByIndex.indices) categoryEmojisByIndex[index] else FALLBACK_EMOJI
     }
 }
 

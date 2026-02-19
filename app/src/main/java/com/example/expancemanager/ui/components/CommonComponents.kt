@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +59,7 @@ fun DeleteConfirmationDialog(
 
 /**
  * Reusable expense item card used across different screens
+ * Optimized for smooth scrolling in LazyColumn
  */
 @Composable
 fun ExpenseItemCard(
@@ -65,12 +67,13 @@ fun ExpenseItemCard(
     onExpenseClick: () -> Unit,
     onDeleteExpense: () -> Unit,
     showCategory: Boolean = true,
-    showDescription: Boolean = false
+    showDescription: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember(expense.id) { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = dimensionResource(R.dimen.spacing_tiny))
             .clickable { onExpenseClick() },
@@ -87,75 +90,111 @@ fun ExpenseItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(dimensionResource(R.dimen.icon_size_large))
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = ExpenseCategories.getCategoryEmoji(expense.category),
-                        fontSize = 24.sp
-                    )
-                }
+                // Category emoji icon
+                CategoryIcon(category = expense.category)
 
                 Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
 
-                Column {
-                    Text(
-                        text = expense.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                    if (showCategory) {
-                        Text(
-                            text = "${expense.category} • ${DateUtils.formatDayMonth(expense.date)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    } else {
-                        Text(
-                            text = DateUtils.formatDate(expense.date),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    }
-                    if (showDescription && expense.description.isNotBlank()) {
-                        Text(
-                            text = expense.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = DateUtils.formatAmount(expense.amount),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
+                // Expense details
+                ExpenseDetails(
+                    title = expense.title,
+                    category = expense.category,
+                    date = expense.date,
+                    description = expense.description,
+                    showCategory = showCategory,
+                    showDescription = showDescription
                 )
-
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.action_delete),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
             }
+
+            // Amount and delete button
+            ExpenseActions(
+                amount = expense.amount,
+                onDeleteClick = { showDeleteDialog = true }
+            )
         }
     }
-
     DeleteConfirmationDialog(
         showDialog = showDeleteDialog,
         onDismiss = { showDeleteDialog = false },
         onConfirm = onDeleteExpense
     )
+}
+
+@Composable
+private fun CategoryIcon(category: String) {
+    val context = LocalContext.current
+    Box(
+        modifier = Modifier
+            .size(dimensionResource(R.dimen.icon_size_large))
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = ExpenseCategories.getCategoryEmoji(context, category),
+            fontSize = 24.sp
+        )
+    }
+}
+
+@Composable
+private fun ExpenseDetails(
+    title: String,
+    category: String,
+    date: Long,
+    description: String,
+    showCategory: Boolean,
+    showDescription: Boolean
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium
+        )
+
+        val subtitle = remember(category, date, showCategory) {
+            if (showCategory) "$category • ${DateUtils.formatDayMonth(date)}" else DateUtils.formatDate(date)
+        }
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        if (showDescription && description.isNotBlank()) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExpenseActions(
+    amount: Double,
+    onDeleteClick: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = remember(amount) { DateUtils.formatAmount(amount) },
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.error
+        )
+
+        IconButton(onClick = onDeleteClick) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = stringResource(R.string.action_delete),
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
 }
 
 /**

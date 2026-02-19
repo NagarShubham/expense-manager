@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -93,6 +94,10 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     // Gson for JSON serialization
     implementation(libs.gson)
+    // Hilt DI
+    implementation(libs.dagger.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
+    ksp(libs.dagger.hilt.compiler)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
