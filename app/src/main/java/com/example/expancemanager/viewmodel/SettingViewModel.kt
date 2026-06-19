@@ -6,9 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.expancemanager.data.BudgetRepository
 import com.example.expancemanager.data.ExpenseRepository
 import com.example.expancemanager.data.MonthlyBudget
+import com.example.expancemanager.data.PreferenceRepository
 import com.example.expancemanager.util.BackupManager
+import com.example.expancemanager.util.BackupManager.BackupImportResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +25,12 @@ import javax.inject.Inject
 class SettingViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val budgetRepository: BudgetRepository,
-    private val backupManager: BackupManager
+    private val backupManager: BackupManager,
+    private val preferenceRepository: PreferenceRepository
 ) : ViewModel() {
     private val _expenseCount = MutableStateFlow(0)
     val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
+    val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -33,50 +39,67 @@ class SettingViewModel @Inject constructor(
     }
 
     /**
-     * Exports all expenses to a JSON file
+     * Exports expenses, budgets, and budget exclusions to a JSON file.
      * @param uri URI where to save the backup file
      * @return Result indicating success or failure
      */
     suspend fun exportData(uri: Uri): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                val expenses = expenseRepository.getAllExpensesForExport()
-                if (expenses.isEmpty()) {
-                    return@withContext Result.failure(Exception("No expenses to export"))
+                val (expenses, monthlyBudgets, budgetExcludedCategories) = coroutineScope {
+                    val expensesDeferred = async { expenseRepository.getAllExpensesForExport() }
+                    val budgetsDeferred = async { budgetRepository.getAllBudgetsForExport() }
+                    val exclusionsDeferred = async { budgetRepository.getAllExcludedCategoriesForExport() }
+                    Triple(expensesDeferred.await(), budgetsDeferred.await(), exclusionsDeferred.await())
                 }
-                backupManager.exportToJson(uri, expenses)
+
+                if (expenses.isEmpty() && monthlyBudgets.isEmpty() && budgetExcludedCategories.isEmpty()) {
+                    return@withContext Result.failure(Exception("No data to export"))
+                }
+
+                backupManager.exportToJson(uri, expenses, monthlyBudgets, budgetExcludedCategories)
             } catch (e: Exception) {
                 Result.failure(Exception("Export failed: ${e.message}"))
             }
         }
 
     /**
-     * Imports expenses from a JSON file
+     * Imports expenses, budgets, and budget exclusions from a JSON file.
+     * Supports v1 backups (expenses only) and v2 backups (full data).
      * @param uri URI of the backup file to import
      * @param replaceExisting If true, deletes existing data before import
-     * @return Result indicating success or failure with count of imported expenses
+     * @return Result with counts of imported records per type
      */
     suspend fun importData(
         uri: Uri,
         replaceExisting: Boolean = false
-    ): Result<Int> =
+    ): Result<BackupImportResult> =
         withContext(Dispatchers.IO) {
             try {
-                val result = backupManager.importFromJson(uri)
-                val importedExpenses = result.getOrNull()
+                val importResult = backupManager.importFromJson(uri)
+                val imported = importResult.getOrNull()
                     ?: return@withContext Result.failure(
-                        result.exceptionOrNull() ?: Exception("Import failed")
+                        importResult.exceptionOrNull() ?: Exception("Import failed")
                     )
 
                 if (replaceExisting) {
                     expenseRepository.deleteAllExpenses()
+                    budgetRepository.deleteAllBudgetData()
                 }
 
-                // Remove auto-generated IDs to avoid conflicts
-                val expensesToInsert = importedExpenses.map { it.copy(id = 0) }
-                expenseRepository.insertExpenses(expensesToInsert)
+                val expensesToInsert =
+                    if (imported.expenses.isEmpty()) {
+                        emptyList()
+                    } else {
+                        imported.expenses.map { it.copy(id = 0) }
+                    }
+                if (expensesToInsert.isNotEmpty()) {
+                    expenseRepository.insertExpenses(expensesToInsert)
+                }
+                budgetRepository.insertBudgets(imported.monthlyBudgets)
+                budgetRepository.insertExcludedCategories(imported.budgetExcludedCategories)
 
-                Result.success(expensesToInsert.size)
+                Result.success(imported.copy(expenses = expensesToInsert))
             } catch (e: Exception) {
                 Result.failure(Exception("Import failed: ${e.message}"))
             }
@@ -146,4 +169,8 @@ class SettingViewModel @Inject constructor(
     }
 
     fun generateBackupFileName() = backupManager.generateBackupFileName()
+
+    fun setDarkTheme(enabled: Boolean) {
+        preferenceRepository.setDarkTheme(enabled)
+    }
 }

@@ -23,11 +23,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true // Enable R8 optimization
-            isShrinkResources = true // Remove unused resources
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "r8-rules.pro",
             )
         }
         debug {
@@ -45,6 +45,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = false // Disable BuildConfig generation if not needed
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = false
     }
 
     packaging {
@@ -100,12 +104,20 @@ dependencies {
     ksp(libs.dagger.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.truth)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+tasks.withType<Test>().configureEach {
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 }
 
 ktlint {

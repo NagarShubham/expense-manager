@@ -46,4 +46,26 @@ class BudgetRepository(
             budgetExcludedCategoryDao.removeExcluded(month, year, category)
         }
     }
+
+    suspend fun getAllBudgetsForExport(): List<MonthlyBudget> = monthlyBudgetDao.getAllBudgets()
+
+    suspend fun getAllExcludedCategoriesForExport(): List<BudgetExcludedCategory> =
+        budgetExcludedCategoryDao.getAllExcluded()
+
+    suspend fun insertBudgets(budgets: List<MonthlyBudget>) {
+        if (budgets.isNotEmpty()) {
+            monthlyBudgetDao.insertBudgets(budgets)
+        }
+    }
+
+    suspend fun insertExcludedCategories(categories: List<BudgetExcludedCategory>) {
+        if (categories.isNotEmpty()) {
+            budgetExcludedCategoryDao.insertExcludedList(categories)
+        }
+    }
+
+    suspend fun deleteAllBudgetData() {
+        monthlyBudgetDao.deleteAllBudgets()
+        budgetExcludedCategoryDao.deleteAllExcluded()
+    }
 }

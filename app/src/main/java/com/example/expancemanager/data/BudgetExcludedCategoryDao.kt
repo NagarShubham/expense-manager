@@ -23,4 +23,13 @@ interface BudgetExcludedCategoryDao {
         year: Int,
         category: String
     )
+
+    @Query("SELECT * FROM budget_excluded_categories")
+    suspend fun getAllExcluded(): List<BudgetExcludedCategory>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertExcludedList(entities: List<BudgetExcludedCategory>)
+
+    @Query("DELETE FROM budget_excluded_categories")
+    suspend fun deleteAllExcluded()
 }

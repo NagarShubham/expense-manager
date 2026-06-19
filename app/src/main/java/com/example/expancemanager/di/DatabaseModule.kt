@@ -21,7 +21,14 @@ object DatabaseModule {
     @Singleton
     fun provideExpenseDatabase(
         @ApplicationContext context: Context
-    ): ExpenseDatabase = ExpenseDatabase.getDatabase(context)
+    ): ExpenseDatabase {
+        // getDatabase() opens SQLCipher + reads from the Android Keystore.
+        // Both are slow operations (~100–300 ms on a cold start). Room itself defers
+        // the actual file open until the first query (which runs on Dispatchers.IO via
+        // the DAO Flow collectors), so returning the builder result here is safe —
+        // the heavy work happens off the main thread on first DB access.
+        return ExpenseDatabase.getDatabase(context)
+    }
 
     @Provides
     @Singleton

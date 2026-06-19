@@ -8,9 +8,12 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import com.example.expancemanager.data.PreferenceRepository
 import com.example.expancemanager.nav.AddExpenseRoute
 import com.example.expancemanager.nav.AllCategoriesRoute
 import com.example.expancemanager.nav.BudgetSettingsRoute
@@ -29,16 +32,21 @@ import com.example.expancemanager.ui.screen.SettingsScreen
 import com.example.expancemanager.ui.theme.ExpanceManagerTheme
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var preferenceRepository: PreferenceRepository
+
     private val viewModel: ExpenseViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ExpanceManagerTheme { MainContent() }
+            val isDarkTheme by preferenceRepository.isDarkTheme.collectAsState()
+            ExpanceManagerTheme(darkTheme = isDarkTheme) { MainContent() }
         }
     }
 

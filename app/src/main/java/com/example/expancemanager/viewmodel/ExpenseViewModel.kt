@@ -129,4 +129,12 @@ class ExpenseViewModel @Inject constructor(
         val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
         loadExpensesForMonth(newMonth, newYear)
     }
+
+    fun goToCurrentMonth() {
+        val calendar = Calendar.getInstance()
+        loadExpensesForMonth(
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.YEAR)
+        )
+    }
 }

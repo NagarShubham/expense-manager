@@ -18,6 +18,10 @@ ktlint = "14.0.1"
 gson = "2.11.0"
 hiltVersion = "2.57.1"
 hiltNavigationCompose = "1.2.0"
+mockk = "1.13.14"
+coroutines = "1.9.0"
+turbine = "1.2.0"
+truth = "1.4.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +51,10 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 dagger-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltVersion" }
 dagger-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltVersion" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 
 
 [plugins]

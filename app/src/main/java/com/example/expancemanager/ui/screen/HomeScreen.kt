@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.expancemanager.R
@@ -91,6 +92,7 @@ fun HomeScreen(
                 year = uiState.selectedYear,
                 onPreviousMonth = { viewModel.changeMonth(-1) },
                 onNextMonth = { viewModel.changeMonth(1) },
+                onMonthYearClick = { viewModel.goToCurrentMonth() },
                 onSettingsClick = onSettingsClick
             )
 
@@ -170,6 +172,7 @@ fun MonthSelector(
     year: Int,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onMonthYearClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
     val formattedMonthYear = remember(month, year) { DateUtils.formatMonthYear(month, year) }
@@ -194,7 +197,12 @@ fun MonthSelector(
         Text(
             text = formattedMonthYear,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.cd_go_to_current_month),
+                onClick = onMonthYearClick
+            )
         )
 
         Row(
@@ -272,28 +280,39 @@ fun BudgetSummaryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(dimensionResource(R.dimen.spacing_default)),
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = if (expectedAmount == null) Alignment.CenterHorizontally else Alignment.Start
         ) {
-            // Row: label + total + status/percent badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.home_total_expenses),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
-                    Text(
-                        text = derived.formattedTotal,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                if (expectedAmount != null) {
+            if (expectedAmount == null) {
+                Text(
+                    text = stringResource(R.string.home_total_expenses),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+                Text(
+                    text = derived.formattedTotal,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.home_total_expenses),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                        Text(
+                            text = derived.formattedTotal,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     Surface(
                         shape = RoundedCornerShape(dimensionResource(R.dimen.spacing_small)),
                         color = if (derived.isOverspent) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary

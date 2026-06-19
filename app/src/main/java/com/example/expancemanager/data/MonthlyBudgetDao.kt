@@ -28,4 +28,13 @@ interface MonthlyBudgetDao {
         month: Int,
         year: Int
     )
+
+    @Query("SELECT * FROM monthly_budgets")
+    suspend fun getAllBudgets(): List<MonthlyBudget>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBudgets(budgets: List<MonthlyBudget>)
+
+    @Query("DELETE FROM monthly_budgets")
+    suspend fun deleteAllBudgets()
 }
