@@ -28,3 +28,5 @@ data class AllCategoriesRoute(
 data object SettingsRoute : AppRoute
 
 data object BudgetSettingsRoute : AppRoute
+
+data object ManageCategoriesRoute : AppRoute

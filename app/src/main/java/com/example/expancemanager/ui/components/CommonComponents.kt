@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +65,7 @@ fun ExpenseItemCard(
     expense: Expense,
     onExpenseClick: () -> Unit,
     onDeleteExpense: () -> Unit,
+    emojiMap: Map<String, String>,
     showCategory: Boolean = true,
     showDescription: Boolean = false,
     modifier: Modifier = Modifier
@@ -91,7 +91,7 @@ fun ExpenseItemCard(
                 modifier = Modifier.weight(1f)
             ) {
                 // Category emoji icon
-                CategoryIcon(category = expense.category)
+                CategoryIcon(category = expense.category, emojiMap = emojiMap)
 
                 Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
 
@@ -121,8 +121,10 @@ fun ExpenseItemCard(
 }
 
 @Composable
-private fun CategoryIcon(category: String) {
-    val context = LocalContext.current
+private fun CategoryIcon(
+    category: String,
+    emojiMap: Map<String, String>
+) {
     Box(
         modifier = Modifier
             .size(dimensionResource(R.dimen.icon_size_large))
@@ -131,7 +133,7 @@ private fun CategoryIcon(category: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = ExpenseCategories.getCategoryEmoji(context, category),
+            text = ExpenseCategories.getCategoryEmoji(category, emojiMap),
             fontSize = 24.sp
         )
     }

@@ -75,7 +75,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: SettingViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToBudgetSettings: () -> Unit = {}
+    onNavigateToBudgetSettings: () -> Unit = {},
+    onNavigateToManageCategories: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -198,6 +199,12 @@ fun SettingsScreen(
                             onClick = onNavigateToBudgetSettings,
                             showDivider = false
                         )
+                    }
+                }
+
+                SettingsSection(title = stringResource(R.string.settings_categories_section)) {
+                    SettingsGroupCard {
+                        SettingsCategoriesRow(onClick = onNavigateToManageCategories)
                     }
                 }
 
@@ -549,6 +556,46 @@ private fun SettingsNavigationRow(
 }
 
 @Composable
+private fun SettingsCategoriesRow(onClick: () -> Unit) {
+    ListItem(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        headlineContent = {
+            Text(
+                text = stringResource(R.string.settings_categories_title),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        },
+        supportingContent = {
+            Text(
+                text = stringResource(R.string.settings_categories_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        leadingContent = {
+            SettingsIconContainer(
+                iconEmoji = "🏷️",
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            )
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
 private fun SettingsActionRow(
     iconResId: Int,
     iconContainerColor: Color,
@@ -652,7 +699,7 @@ private fun SettingsExportConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -734,7 +781,7 @@ private fun SettingsImportOptionsDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -809,7 +856,7 @@ private fun SettingsImportConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

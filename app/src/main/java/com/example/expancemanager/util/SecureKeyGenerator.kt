@@ -3,8 +3,6 @@ package com.example.expancemanager.util
 import android.content.Context
 import android.util.Base64
 import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import java.security.SecureRandom
 
 /**
@@ -51,36 +49,15 @@ object SecureKeyGenerator {
     }
 
     /**
-     * Creates or retrieves MasterKey for EncryptedSharedPreferences
-     */
-    private fun getMasterKey(context: Context): MasterKey =
-        MasterKey
-            .Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-    /**
-     * Creates or retrieves EncryptedSharedPreferences instance
-     */
-    private fun getEncryptedPrefs(context: Context) =
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            getMasterKey(context),
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-
-    /**
-     * Retrieves stored passphrase from EncryptedSharedPreferences
+     * Retrieves the stored passphrase, or null if none has been stored yet.
+     *
+     * IMPORTANT: a failure to *read* an existing store is NOT swallowed into null.
+     * Returning null here would make [getOrGenerateKey] mint a brand-new passphrase,
+     * and SQLCipher could then never decrypt the existing database — silent, total
+     * data loss. A read error must propagate so the caller/app can surface it instead.
      */
     private fun getStoredPassphrase(context: Context): String? =
-        try {
-            getEncryptedPrefs(context).getString(KEY_PASSPHRASE, null)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+        EncryptedPrefs.get(context, PREFS_NAME).getString(KEY_PASSPHRASE, null)
 
     /**
      * Stores passphrase securely in EncryptedSharedPreferences
@@ -89,22 +66,7 @@ object SecureKeyGenerator {
         context: Context,
         passphrase: String
     ) {
-        try {
-            getEncryptedPrefs(context).edit { putString(KEY_PASSPHRASE, passphrase) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        EncryptedPrefs.get(context, PREFS_NAME).edit { putString(KEY_PASSPHRASE, passphrase) }
     }
 
-    /**
-     * Clears stored passphrase (use with caution - will make database inaccessible)
-     */
-    fun clearPassphrase(context: Context) {
-        cachedPassphrase = null
-        try {
-            getEncryptedPrefs(context).edit { remove(KEY_PASSPHRASE) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 }

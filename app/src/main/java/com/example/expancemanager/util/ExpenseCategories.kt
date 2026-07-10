@@ -1,55 +1,46 @@
 package com.example.expancemanager.util
 
-import android.content.Context
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.example.expancemanager.R
-
 object ExpenseCategories {
+    const val FALLBACK_EMOJI = "💰"
+
     /**
-     * Emojis in the same order as [R.array.expense_categories], so lookup by index
-     * works correctly for any locale (categories are stored as localized strings).
+     * Canonical default categories: English name + emoji. This is the single
+     * source of truth used to seed the `categories` table (see the DB migration
+     * and first-run seeding) and as an emoji fallback when a category has no row yet.
+     *
+     * The names MUST match the original English values so that expenses created
+     * before categories became editable still resolve.
      */
-    private val categoryEmojisByIndex = listOf(
-        "💡", // Bills & Utilities
-        "🚗", // Transportation
-        "🍔", // Food & Dining
-        "💆", // Personal Care
-        "💳", // EMI
-        "👶", // Baby
-        "🛒", // Groceries
-        "📈", // Investments
-        "✈️", // Travel
-        "🛍️", // Shopping
-        "🎬", // Entertainment
-        "🏥", // Healthcare
-        "📚", // Education
-        "🏠", // Rent
-        "🛡️", // Insurance
-        "🎁", // Gifts
-        "💰" // Other
+    val DEFAULT_CATEGORIES: List<Pair<String, String>> = listOf(
+        "Bills & Utilities" to "💡",
+        "Transportation" to "🚗",
+        "Food & Dining" to "🍔",
+        "Personal Care" to "💆",
+        "EMI" to "💳",
+        "Baby" to "👶",
+        "Groceries" to "🛒",
+        "Investments" to "📈",
+        "Travel" to "✈️",
+        "Shopping" to "🛍️",
+        "Entertainment" to "🎬",
+        "Healthcare" to "🏥",
+        "Education" to "📚",
+        "Rent" to "🏠",
+        "Insurance" to "🛡️",
+        "Gifts" to "🎁",
+        "Other" to "💰"
     )
 
-    private const val FALLBACK_EMOJI = "💰"
-
-    fun getCategories(context: Context): List<String> = context.resources.getStringArray(R.array.expense_categories).toList()
+    /** Emoji lookup by name from the default set, for the resource/index fallback path. */
+    private val defaultEmojiByName: Map<String, String> = DEFAULT_CATEGORIES.toMap()
 
     /**
-     * Returns the emoji for the given category name.
-     * Uses the same order as [getCategories] so it works for any locale.
+     * Returns the emoji for [category], preferring a user-managed [emojiMap] (name -> emoji
+     * from the categories table) and falling back to the built-in default set, then
+     * [FALLBACK_EMOJI]. Safe to call before the DB has loaded (empty map).
      */
     fun getCategoryEmoji(
-        context: Context,
-        category: String
-    ): String {
-        val categories = getCategories(context)
-        val index = categories.indexOf(category)
-        return if (index in categoryEmojisByIndex.indices) categoryEmojisByIndex[index] else FALLBACK_EMOJI
-    }
-}
-
-@Composable
-fun rememberCategories(): List<String> {
-    val context = LocalContext.current
-    return ExpenseCategories.getCategories(context)
+        category: String,
+        emojiMap: Map<String, String>
+    ): String = emojiMap[category] ?: defaultEmojiByName[category] ?: FALLBACK_EMOJI
 }

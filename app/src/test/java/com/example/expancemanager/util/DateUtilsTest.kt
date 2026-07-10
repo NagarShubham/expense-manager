@@ -3,6 +3,7 @@ package com.example.expancemanager.util
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import java.util.Calendar
+import java.util.Locale
 
 class DateUtilsTest {
     @Test
@@ -19,6 +20,43 @@ class DateUtilsTest {
 
         assertThat(month).isEqualTo(11)
         assertThat(year).isEqualTo(2023)
+    }
+
+    @Test
+    fun formatAmount_usesRupeeSymbol() {
+        val formatted = DateUtils.formatAmount(100.0)
+
+        assertThat(formatted).contains("₹")
+    }
+
+    @Test
+    fun formatAmount_usesIndianDigitGroupingForLargeAmounts() {
+        // Indian system groups as lakh: 1,00,000.00 — not 100,000.00
+        val formatted = DateUtils.formatAmount(100000.0)
+
+        assertThat(formatted).contains("₹100,000.00")
+    }
+
+    @Test
+    fun formatAmount_formatsWithTwoDecimalPlaces() {
+        val formatted = DateUtils.formatAmount(1234.5)
+
+        assertThat(formatted).contains("1,234.50")
+    }
+
+    @Test
+    fun formatAmount_isLocaleIndependent() {
+        // Should produce INR formatting regardless of the JVM default locale at test time.
+        val previousDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.US)
+            val formatted = DateUtils.formatAmount(50.0)
+
+            assertThat(formatted).contains("₹")
+            assertThat(formatted).doesNotContain("$")
+        } finally {
+            Locale.setDefault(previousDefault)
+        }
     }
 
     @Test

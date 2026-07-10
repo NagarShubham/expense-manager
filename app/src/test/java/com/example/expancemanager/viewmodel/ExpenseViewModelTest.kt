@@ -3,6 +3,8 @@ package com.example.expancemanager.viewmodel
 import app.cash.turbine.test
 import com.example.expancemanager.MainDispatcherRule
 import com.example.expancemanager.data.BudgetRepository
+import com.example.expancemanager.data.CategoryRepository
+import com.example.expancemanager.data.CategoryTotal
 import com.example.expancemanager.data.Expense
 import com.example.expancemanager.data.ExpenseRepository
 import com.example.expancemanager.data.MonthlyBudget
@@ -23,6 +25,7 @@ class ExpenseViewModelTest {
 
     private val expenseRepository = mockk<ExpenseRepository>()
     private val budgetRepository = mockk<BudgetRepository>()
+    private val categoryRepository = mockk<CategoryRepository>()
 
     @Before
     fun setUp() {
@@ -31,11 +34,12 @@ class ExpenseViewModelTest {
         every { expenseRepository.getCategoryTotalsByDateRange(any(), any()) } returns flowOf(emptyList())
         every { budgetRepository.getBudgetByMonthYear(any(), any()) } returns flowOf(null)
         every { budgetRepository.getExcludedCategoriesByMonthYear(any(), any()) } returns flowOf(emptyList())
+        every { categoryRepository.getCategories() } returns flowOf(emptyList())
     }
 
     @Test
     fun loadExpensesForMonth_updatesSelectedMonthAndYear() = runTest {
-        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository)
+        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository, categoryRepository)
 
         viewModel.uiState.test {
             awaitItem()
@@ -49,7 +53,7 @@ class ExpenseViewModelTest {
 
     @Test
     fun changeMonth_advancesSelectedMonth() = runTest {
-        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository)
+        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository, categoryRepository)
 
         viewModel.uiState.test {
             awaitItem()
@@ -71,12 +75,18 @@ class ExpenseViewModelTest {
         )
         every { expenseRepository.getExpensesByDateRange(any(), any()) } returns flowOf(expenses)
         every { expenseRepository.getTotalAmountByDateRange(any(), any()) } returns flowOf(150.0)
+        every { expenseRepository.getCategoryTotalsByDateRange(any(), any()) } returns flowOf(
+            listOf(
+                CategoryTotal(category = "Food", total = 100.0),
+                CategoryTotal(category = "Travel", total = 50.0)
+            )
+        )
         every { budgetRepository.getBudgetByMonthYear(any(), any()) } returns flowOf(
             MonthlyBudget(month = 0, year = 2024, expectedAmount = 500.0)
         )
         every { budgetRepository.getExcludedCategoriesByMonthYear(any(), any()) } returns flowOf(listOf("Travel"))
 
-        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository)
+        val viewModel = ExpenseViewModel(expenseRepository, budgetRepository, categoryRepository)
 
         viewModel.uiState.test {
             val state = awaitItem()

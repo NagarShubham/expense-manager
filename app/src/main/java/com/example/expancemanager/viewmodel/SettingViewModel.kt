@@ -3,10 +3,15 @@ package com.example.expancemanager.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.expancemanager.data.BudgetExcludedCategory
 import com.example.expancemanager.data.BudgetRepository
+import com.example.expancemanager.data.Category
+import com.example.expancemanager.data.CategoryRepository
+import com.example.expancemanager.data.Expense
 import com.example.expancemanager.data.ExpenseRepository
 import com.example.expancemanager.data.MonthlyBudget
 import com.example.expancemanager.data.PreferenceRepository
+import com.example.expancemanager.data.TransactionRunner
 import com.example.expancemanager.util.BackupManager
 import com.example.expancemanager.util.BackupManager.BackupImportResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,12 +30,22 @@ import javax.inject.Inject
 class SettingViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val budgetRepository: BudgetRepository,
+    private val categoryRepository: CategoryRepository,
     private val backupManager: BackupManager,
-    private val preferenceRepository: PreferenceRepository
+    private val preferenceRepository: PreferenceRepository,
+    private val transactionRunner: TransactionRunner
 ) : ViewModel() {
     private val _expenseCount = MutableStateFlow(0)
     val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
     val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
+
+    /** Aggregates everything gathered for an export before handing it to [BackupManager]. */
+    private data class ExportData(
+        val expenses: List<Expense>,
+        val monthlyBudgets: List<MonthlyBudget>,
+        val budgetExcludedCategories: List<BudgetExcludedCategory>,
+        val categories: List<Category>
+    )
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -46,18 +61,34 @@ class SettingViewModel @Inject constructor(
     suspend fun exportData(uri: Uri): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                val (expenses, monthlyBudgets, budgetExcludedCategories) = coroutineScope {
+                val export = coroutineScope {
                     val expensesDeferred = async { expenseRepository.getAllExpensesForExport() }
                     val budgetsDeferred = async { budgetRepository.getAllBudgetsForExport() }
                     val exclusionsDeferred = async { budgetRepository.getAllExcludedCategoriesForExport() }
-                    Triple(expensesDeferred.await(), budgetsDeferred.await(), exclusionsDeferred.await())
+                    val categoriesDeferred = async { categoryRepository.getAllForExport() }
+                    ExportData(
+                        expenses = expensesDeferred.await(),
+                        monthlyBudgets = budgetsDeferred.await(),
+                        budgetExcludedCategories = exclusionsDeferred.await(),
+                        categories = categoriesDeferred.await()
+                    )
                 }
 
-                if (expenses.isEmpty() && monthlyBudgets.isEmpty() && budgetExcludedCategories.isEmpty()) {
+                if (export.expenses.isEmpty() &&
+                    export.monthlyBudgets.isEmpty() &&
+                    export.budgetExcludedCategories.isEmpty() &&
+                    export.categories.isEmpty()
+                ) {
                     return@withContext Result.failure(Exception("No data to export"))
                 }
 
-                backupManager.exportToJson(uri, expenses, monthlyBudgets, budgetExcludedCategories)
+                backupManager.exportToJson(
+                    uri,
+                    export.expenses,
+                    export.monthlyBudgets,
+                    export.budgetExcludedCategories,
+                    export.categories
+                )
             } catch (e: Exception) {
                 Result.failure(Exception("Export failed: ${e.message}"))
             }
@@ -82,22 +113,34 @@ class SettingViewModel @Inject constructor(
                         importResult.exceptionOrNull() ?: Exception("Import failed")
                     )
 
-                if (replaceExisting) {
-                    expenseRepository.deleteAllExpenses()
-                    budgetRepository.deleteAllBudgetData()
-                }
-
                 val expensesToInsert =
                     if (imported.expenses.isEmpty()) {
                         emptyList()
                     } else {
                         imported.expenses.map { it.copy(id = 0) }
                     }
-                if (expensesToInsert.isNotEmpty()) {
-                    expenseRepository.insertExpenses(expensesToInsert)
+
+                // Wipe + insert run in one transaction so a mid-restore failure rolls back
+                // to the pre-import state instead of leaving data half-deleted/half-written.
+                transactionRunner {
+                    if (replaceExisting) {
+                        expenseRepository.deleteAllExpenses()
+                        budgetRepository.deleteAllBudgetData()
+                        // Only wipe categories when the backup actually carries them; otherwise
+                        // an older (v1/v2) backup would leave the user with zero categories.
+                        if (imported.categories.isNotEmpty()) {
+                            categoryRepository.deleteAllCategories()
+                        }
+                    }
+
+                    if (expensesToInsert.isNotEmpty()) {
+                        expenseRepository.insertExpenses(expensesToInsert)
+                    }
+                    budgetRepository.insertBudgets(imported.monthlyBudgets)
+                    budgetRepository.insertExcludedCategories(imported.budgetExcludedCategories)
+                    // REPLACE-conflict insert merges/updates categories by name.
+                    categoryRepository.insertCategories(imported.categories)
                 }
-                budgetRepository.insertBudgets(imported.monthlyBudgets)
-                budgetRepository.insertExcludedCategories(imported.budgetExcludedCategories)
 
                 Result.success(imported.copy(expenses = expensesToInsert))
             } catch (e: Exception) {

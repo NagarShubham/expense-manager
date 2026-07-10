@@ -46,6 +46,15 @@ interface ExpenseDao {
         endDate: Long
     ): Flow<List<CategoryTotal>>
 
+    @Query("SELECT COUNT(*) FROM expenses WHERE category = :name")
+    suspend fun countExpensesInCategory(name: String): Int
+
+    @Query("UPDATE expenses SET category = :newName WHERE category = :oldName")
+    suspend fun renameCategory(
+        oldName: String,
+        newName: String
+    )
+
     @Query("SELECT * FROM expenses ORDER BY date DESC")
     suspend fun getAllExpensesForExport(): List<Expense>
 

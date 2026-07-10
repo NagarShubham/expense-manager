@@ -24,6 +24,15 @@ interface BudgetExcludedCategoryDao {
         category: String
     )
 
+    @Query("UPDATE budget_excluded_categories SET category = :newName WHERE category = :oldName")
+    suspend fun renameExcludedCategory(
+        oldName: String,
+        newName: String
+    )
+
+    @Query("DELETE FROM budget_excluded_categories WHERE category = :category")
+    suspend fun removeExcludedByCategory(category: String)
+
     @Query("SELECT * FROM budget_excluded_categories")
     suspend fun getAllExcluded(): List<BudgetExcludedCategory>
 

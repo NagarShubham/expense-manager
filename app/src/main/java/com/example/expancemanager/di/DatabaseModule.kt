@@ -1,9 +1,13 @@
 package com.example.expancemanager.di
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.example.expancemanager.data.BudgetExcludedCategoryDao
 import com.example.expancemanager.data.BudgetRepository
+import com.example.expancemanager.data.CategoryDao
+import com.example.expancemanager.data.CategoryRepository
 import com.example.expancemanager.data.ExpenseDao
+import com.example.expancemanager.data.TransactionRunner
 import com.example.expancemanager.data.ExpenseDatabase
 import com.example.expancemanager.data.ExpenseRepository
 import com.example.expancemanager.data.MonthlyBudgetDao
@@ -52,4 +56,28 @@ object DatabaseModule {
         monthlyBudgetDao: MonthlyBudgetDao,
         budgetExcludedCategoryDao: BudgetExcludedCategoryDao
     ): BudgetRepository = BudgetRepository(monthlyBudgetDao, budgetExcludedCategoryDao)
+
+    @Provides
+    @Singleton
+    fun provideCategoryDao(database: ExpenseDatabase): CategoryDao = database.categoryDao()
+
+    @Provides
+    @Singleton
+    fun provideTransactionRunner(database: ExpenseDatabase): TransactionRunner =
+        TransactionRunner { block -> database.withTransaction { block() } }
+
+    @Provides
+    @Singleton
+    fun provideCategoryRepository(
+        categoryDao: CategoryDao,
+        expenseDao: ExpenseDao,
+        budgetExcludedCategoryDao: BudgetExcludedCategoryDao,
+        transactionRunner: TransactionRunner
+    ): CategoryRepository =
+        CategoryRepository(
+            categoryDao = categoryDao,
+            expenseDao = expenseDao,
+            budgetExcludedCategoryDao = budgetExcludedCategoryDao,
+            transactionRunner = transactionRunner
+        )
 }

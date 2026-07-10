@@ -3,6 +3,7 @@ package com.example.expancemanager.util
 import android.content.ContentResolver
 import android.net.Uri
 import com.example.expancemanager.data.BudgetExcludedCategory
+import com.example.expancemanager.data.Category
 import com.example.expancemanager.data.Expense
 import com.example.expancemanager.data.MonthlyBudget
 import com.google.gson.Gson
@@ -20,8 +21,9 @@ import javax.inject.Inject
  * Manages backup and restore operations for expense, budget, and exclusion data.
  * Exports data as JSON files and imports from JSON files.
  *
- * Version 1 backups contain expenses only; version 2 adds [monthlyBudgets] and
- * [budgetExcludedCategories]. Missing fields are treated as empty lists on import.
+ * Version 1 backups contain expenses only; version 2 adds monthly budgets and
+ * budget exclusions; version 3 adds user-managed [Category] rows. Missing fields are
+ * treated as empty lists on import, so older backups still restore.
  */
 class BackupManager @Inject constructor(private val contentResolver: ContentResolver) {
     private val gson: Gson = GsonBuilder()
@@ -38,13 +40,15 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
         val totalExpenses: Int,
         val expenses: List<Expense>? = null,
         val monthlyBudgets: List<MonthlyBudget>? = null,
-        val budgetExcludedCategories: List<BudgetExcludedCategory>? = null
+        val budgetExcludedCategories: List<BudgetExcludedCategory>? = null,
+        val categories: List<Category>? = null
     )
 
     data class BackupImportResult(
         val expenses: List<Expense>,
         val monthlyBudgets: List<MonthlyBudget>,
-        val budgetExcludedCategories: List<BudgetExcludedCategory>
+        val budgetExcludedCategories: List<BudgetExcludedCategory>,
+        val categories: List<Category>
     )
 
     /**
@@ -54,7 +58,8 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
         uri: Uri,
         expenses: List<Expense>,
         monthlyBudgets: List<MonthlyBudget>,
-        budgetExcludedCategories: List<BudgetExcludedCategory>
+        budgetExcludedCategories: List<BudgetExcludedCategory>,
+        categories: List<Category>
     ): Result<String> =
         withContext(Dispatchers.IO) {
             try {
@@ -63,7 +68,8 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
                     totalExpenses = expenses.size,
                     expenses = expenses,
                     monthlyBudgets = monthlyBudgets,
-                    budgetExcludedCategories = budgetExcludedCategories
+                    budgetExcludedCategories = budgetExcludedCategories,
+                    categories = categories
                 )
 
                 contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -119,16 +125,21 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
     private data class NormalizedBackup(
         val expenses: List<Expense>,
         val monthlyBudgets: List<MonthlyBudget>,
-        val budgetExcludedCategories: List<BudgetExcludedCategory>
+        val budgetExcludedCategories: List<BudgetExcludedCategory>,
+        val categories: List<Category>
     ) {
         fun hasImportableData(): Boolean =
-            expenses.isNotEmpty() || monthlyBudgets.isNotEmpty() || budgetExcludedCategories.isNotEmpty()
+            expenses.isNotEmpty() ||
+                monthlyBudgets.isNotEmpty() ||
+                budgetExcludedCategories.isNotEmpty() ||
+                categories.isNotEmpty()
 
         fun toImportResult(): BackupImportResult =
             BackupImportResult(
                 expenses = expenses,
                 monthlyBudgets = monthlyBudgets,
-                budgetExcludedCategories = budgetExcludedCategories
+                budgetExcludedCategories = budgetExcludedCategories,
+                categories = categories
             )
     }
 
@@ -155,7 +166,8 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
         NormalizedBackup(
             expenses = backupData.expenses.orEmpty(),
             monthlyBudgets = backupData.monthlyBudgets.orEmpty(),
-            budgetExcludedCategories = backupData.budgetExcludedCategories.orEmpty()
+            budgetExcludedCategories = backupData.budgetExcludedCategories.orEmpty(),
+            categories = backupData.categories.orEmpty()
         )
 
     private fun buildExportSuccessMessage(
@@ -172,7 +184,7 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
     }
 
     companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
 
         private val BACKUP_DATA_TYPE = object : TypeToken<BackupData>() {}.type
 

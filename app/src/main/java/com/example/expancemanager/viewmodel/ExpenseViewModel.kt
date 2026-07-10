@@ -4,6 +4,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.expancemanager.data.BudgetRepository
+import com.example.expancemanager.data.Category
+import com.example.expancemanager.data.CategoryRepository
 import com.example.expancemanager.data.CategoryTotal
 import com.example.expancemanager.data.Expense
 import com.example.expancemanager.data.ExpenseRepository
@@ -33,21 +35,30 @@ data class ExpenseUiState(
     /** Amount that counts toward budget (total minus excluded categories). Used for Used/Remaining/Progress. */
     val totalAmountForBudget: Double = 0.0,
     /** Category names excluded from monthly budget; expenses in these still show but don't count toward budget. */
-    val excludedCategoryNames: Set<String> = emptySet()
-)
+    val excludedCategoryNames: Set<String> = emptySet(),
+    /** User-managed categories, ordered. Used to source names and emojis across the UI. */
+    val categories: List<Category> = emptyList()
+) {
+    /**
+     * Convenience map of category name -> emoji for lookups via [ExpenseCategories.getCategoryEmoji].
+     * Computed once per state instance (lazy) so it keeps a stable identity across reads; this lets
+     * Compose skip recomposition and honor `remember(..., emojiMap)` keys in the UI instead of
+     * rebuilding a fresh map on every access.
+     */
+    val categoryEmojiMap: Map<String, String> by lazy { categories.associate { it.name to it.emoji } }
+}
 
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
-    private val budgetRepository: BudgetRepository
+    private val budgetRepository: BudgetRepository,
+    private val categoryRepository: CategoryRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
     /** Single source of truth for which month/year to load; one collector reacts to this. */
-    private val selectedMonthYearFlow = MutableStateFlow(
-        Calendar.getInstance().run { get(Calendar.MONTH) to get(Calendar.YEAR) }
-    )
+    private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
     val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
 
@@ -65,8 +76,8 @@ class ExpenseViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            selectedMonthYearFlow
-                .flatMapLatest { (month, year) ->
+            val monthlyStateFlow =
+                selectedMonthYearFlow.flatMapLatest { (month, year) ->
                     val (startDate, endDate) = DateUtils.getMonthDateRange(month, year)
                     combine(
                         expenseRepository.getExpensesByDateRange(startDate, endDate),
@@ -77,7 +88,9 @@ class ExpenseViewModel @Inject constructor(
                     ) { expenses, total, categoryTotals, budget, excludedList ->
                         val excluded = excludedList.toSet()
                         val totalAmount = total ?: 0.0
-                        val excludedSum = expenses.filter { it.category in excluded }.sumOf { it.amount }
+                        // Sum over the already-aggregated per-category totals (from SQL GROUP BY)
+                        // rather than re-scanning every expense row.
+                        val excludedSum = categoryTotals.filter { it.category in excluded }.sumOf { it.total }
                         val totalAmountForBudget = (totalAmount - excludedSum).coerceAtLeast(0.0)
                         ExpenseUiState(
                             expenses = expenses,
@@ -90,7 +103,13 @@ class ExpenseViewModel @Inject constructor(
                             excludedCategoryNames = excluded
                         )
                     }
-                }.collect { _uiState.value = it }
+                }
+
+            // Categories are month-independent; merge them in so every screen sees the
+            // latest names/emojis regardless of the selected month.
+            combine(monthlyStateFlow, categoryRepository.getCategories()) { state, categories ->
+                state.copy(categories = categories)
+            }.collect { _uiState.value = it }
         }
     }
 
@@ -131,10 +150,7 @@ class ExpenseViewModel @Inject constructor(
     }
 
     fun goToCurrentMonth() {
-        val calendar = Calendar.getInstance()
-        loadExpensesForMonth(
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.YEAR)
-        )
+        val (month, year) = DateUtils.currentMonthYear()
+        loadExpensesForMonth(month, year)
     }
 }

@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.util.SecureKeyGenerator
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
@@ -15,8 +16,8 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
  * Optimized with indexes for better query performance
  */
 @Database(
-    entities = [Expense::class, MonthlyBudget::class, BudgetExcludedCategory::class],
-    version = 5,
+    entities = [Expense::class, MonthlyBudget::class, BudgetExcludedCategory::class, Category::class],
+    version = 7,
     exportSchema = false
 )
 abstract class ExpenseDatabase : RoomDatabase() {
@@ -25,6 +26,8 @@ abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun monthlyBudgetDao(): MonthlyBudgetDao
 
     abstract fun budgetExcludedCategoryDao(): BudgetExcludedCategoryDao
+
+    abstract fun categoryDao(): CategoryDao
 
     companion object {
         @Volatile
@@ -100,6 +103,64 @@ abstract class ExpenseDatabase : RoomDatabase() {
         }
 
         /**
+         * Migration from version 5 to 6: Add the user-manageable `categories` table and
+         * seed it with the built-in defaults. Only creates + seeds a new table; the
+         * `expenses` and `budget_excluded_categories` tables are left untouched, so no
+         * existing data is altered. Seeded names match the English defaults so existing
+         * expenses keep resolving their category + emoji.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS categories (
+                        name TEXT NOT NULL PRIMARY KEY,
+                        emoji TEXT NOT NULL,
+                        sortOrder INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                seedDefaultCategories(db)
+            }
+        }
+
+        /**
+         * Migration from version 6 to 7: Add an index on budget_excluded_categories.category
+         * to speed up the category-rename cascade UPDATE (the composite PK's leftmost column
+         * is `month`, so a category-only predicate couldn't use it).
+         */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_budget_excluded_categories_category " +
+                        "ON budget_excluded_categories(category)"
+                )
+            }
+        }
+
+        /**
+         * Inserts the built-in default categories. Uses INSERT OR IGNORE so it is
+         * idempotent and never clobbers existing rows. Shared by the v5→v6 migration
+         * (existing installs) and the [onCreate] callback (fresh installs).
+         */
+        private fun seedDefaultCategories(db: SupportSQLiteDatabase) {
+            ExpenseCategories.DEFAULT_CATEGORIES.forEachIndexed { index, (name, emoji) ->
+                db.execSQL(
+                    "INSERT OR IGNORE INTO categories (name, emoji, sortOrder) VALUES (?, ?, ?)",
+                    arrayOf(name, emoji, index)
+                )
+            }
+        }
+
+        /** Seeds default categories on a brand-new database (no migration runs on first create). */
+        private val seedCallback = object : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                seedDefaultCategories(db)
+            }
+        }
+
+        /**
          * Gets or creates an encrypted database instance.
          * Uses double-checked locking so only one instance is created under concurrent access.
          */
@@ -118,20 +179,20 @@ abstract class ExpenseDatabase : RoomDatabase() {
                             ExpenseDatabase::class.java,
                             "expense_database"
                         ).openHelperFactory(factory)
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                        .addMigrations(
+                            MIGRATION_1_2,
+                            MIGRATION_2_3,
+                            MIGRATION_3_4,
+                            MIGRATION_4_5,
+                            MIGRATION_5_6,
+                            MIGRATION_6_7
+                        )
+                        .addCallback(seedCallback)
                         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                         .build()
                         .also { INSTANCE = it }
                 }
             }
 
-        /**
-         * Closes and clears the database instance
-         * Call this if you need to reset the database
-         */
-        fun closeDatabase() {
-            INSTANCE?.close()
-            INSTANCE = null
-        }
     }
 }

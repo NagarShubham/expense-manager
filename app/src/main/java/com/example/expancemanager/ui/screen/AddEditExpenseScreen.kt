@@ -10,9 +10,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +22,6 @@ import com.example.expancemanager.R
 import com.example.expancemanager.data.Expense
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
-import com.example.expancemanager.util.rememberCategories
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.launch
 
@@ -33,19 +32,33 @@ fun AddEditExpenseScreen(
     viewModel: ExpenseViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val categories = rememberCategories()
-    var title by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var category by remember(categories) { mutableStateOf(categories.firstOrNull() ?: "") }
-    var description by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val uiState by viewModel.uiState.collectAsState()
+    val categories = remember(uiState.categories) { uiState.categories.map { it.name } }
+    val emojiMap = uiState.categoryEmojiMap
+    // rememberSaveable so typed input survives rotation / process death.
+    var title by rememberSaveable { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("") }
+    // Category state is independent of the (async-loading) list so a late emission
+    // never clobbers an edit-loaded or user-picked value.
+    var category by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var selectedDate by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    // One-shot guard so defaulting the category never re-runs on a later categories emission.
+    var categoryInitialized by rememberSaveable { mutableStateOf(false) }
     var showCategoryMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val isEditMode = expenseId != null
     val isValid = title.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
+
+    // Default the picker to the first category once the list loads (add mode only, once).
+    LaunchedEffect(categories) {
+        if (!isEditMode && !categoryInitialized && categories.isNotEmpty()) {
+            category = categories.first()
+            categoryInitialized = true
+        }
+    }
 
     // Load expense if editing
     LaunchedEffect(expenseId) {
@@ -131,7 +144,7 @@ fun AddEditExpenseScreen(
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     leadingIcon = {
                         Text(
-                            text = ExpenseCategories.getCategoryEmoji(context, category),
+                            text = ExpenseCategories.getCategoryEmoji(category, emojiMap),
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
@@ -146,7 +159,7 @@ fun AddEditExpenseScreen(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = ExpenseCategories.getCategoryEmoji(context, cat),
+                                            text = ExpenseCategories.getCategoryEmoji(cat, emojiMap),
                                             modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_small))
                                         )
                                         Text(cat)

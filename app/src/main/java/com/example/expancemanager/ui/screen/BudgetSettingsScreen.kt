@@ -32,11 +32,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,10 +51,10 @@ import com.example.expancemanager.R
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.util.showShortToast
+import com.example.expancemanager.viewmodel.CategoryViewModel
 import com.example.expancemanager.viewmodel.SettingViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,26 +95,32 @@ fun BudgetSettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val categoryViewModel: CategoryViewModel = hiltViewModel()
+    val categories by categoryViewModel.categories.collectAsState()
     var excludedCategoryNames by remember { mutableStateOf<Set<String>>(emptySet()) }
-    val allCategories = remember(context) { ExpenseCategories.getCategories(context) }
-    val (currentMonth, currentYear) = remember {
-        Calendar.getInstance().run { get(Calendar.MONTH) to get(Calendar.YEAR) }
-    }
-    var selectedMonth by remember { mutableStateOf(currentMonth) }
-    var selectedYear by remember { mutableStateOf(currentYear) }
-    var amountText by remember { mutableStateOf("") }
+    val allCategories = remember(categories) { categories.map { it.name } }
+    val emojiMap = remember(categories) { categories.associate { it.name to it.emoji } }
+    val (currentMonth, currentYear) = remember { DateUtils.currentMonthYear() }
+    var selectedMonth by rememberSaveable { mutableStateOf(currentMonth) }
+    var selectedYear by rememberSaveable { mutableStateOf(currentYear) }
+    var amountText by rememberSaveable { mutableStateOf("") }
     var showMonthMenu by remember { mutableStateOf(false) }
     var showYearMenu by remember { mutableStateOf(false) }
 
     val monthOptions = remember { 0..11 }
     val yearRange = remember(currentYear) { (currentYear - 2)..(currentYear + 1) }
 
+    // One-shot load of the expected amount when the month/year changes.
     LaunchedEffect(selectedMonth, selectedYear) {
         amountText = viewModel
             .getExpectedBudgetForMonth(selectedMonth, selectedYear)
             .takeIf { it != null && it > 0 }
             ?.toString()
             .orEmpty()
+    }
+
+    // Separate, continuous collection of the excluded-category set for the month/year.
+    LaunchedEffect(selectedMonth, selectedYear) {
         viewModel.getExcludedByMonthYear(selectedMonth, selectedYear).collectLatest {
             excludedCategoryNames = it.toSet()
         }
@@ -281,7 +289,7 @@ fun BudgetSettingsScreen(
                                 onCheckedChange = { viewModel.setCategoryExcludedFromBudget(selectedMonth, selectedYear, cat, it) }
                             )
                             Text(
-                                text = "${ExpenseCategories.getCategoryEmoji(context, cat)} $cat",
+                                text = "${ExpenseCategories.getCategoryEmoji(cat, emojiMap)} $cat",
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_small))
                             )

@@ -21,6 +21,7 @@ import com.example.expancemanager.nav.CategoryExpensesRoute
 import com.example.expancemanager.nav.EditExpenseRoute
 import com.example.expancemanager.nav.ExpenseDetailRoute
 import com.example.expancemanager.nav.HomeScreenRoute
+import com.example.expancemanager.nav.ManageCategoriesRoute
 import com.example.expancemanager.nav.SettingsRoute
 import com.example.expancemanager.ui.screen.AddEditExpenseScreen
 import com.example.expancemanager.ui.screen.AllCategoriesScreen
@@ -28,6 +29,7 @@ import com.example.expancemanager.ui.screen.BudgetSettingsScreen
 import com.example.expancemanager.ui.screen.CategoryExpensesScreen
 import com.example.expancemanager.ui.screen.ExpenseDetailScreen
 import com.example.expancemanager.ui.screen.HomeScreen
+import com.example.expancemanager.ui.screen.ManageCategoriesScreen
 import com.example.expancemanager.ui.screen.SettingsScreen
 import com.example.expancemanager.ui.theme.ExpanceManagerTheme
 import com.example.expancemanager.viewmodel.ExpenseViewModel
@@ -125,12 +127,19 @@ class MainActivity : ComponentActivity() {
             entry<SettingsRoute> {
                 SettingsScreen(
                     onNavigateBack = viewModel::navigateBack,
-                    onNavigateToBudgetSettings = { viewModel.navigateTo(BudgetSettingsRoute) }
+                    onNavigateToBudgetSettings = { viewModel.navigateTo(BudgetSettingsRoute) },
+                    onNavigateToManageCategories = { viewModel.navigateTo(ManageCategoriesRoute) }
                 )
             }
 
             entry<BudgetSettingsRoute> {
                 BudgetSettingsScreen(
+                    onNavigateBack = viewModel::navigateBack
+                )
+            }
+
+            entry<ManageCategoriesRoute> {
+                ManageCategoriesScreen(
                     onNavigateBack = viewModel::navigateBack
                 )
             }

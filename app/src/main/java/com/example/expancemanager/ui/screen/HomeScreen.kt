@@ -37,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -129,6 +128,7 @@ fun HomeScreen(
                                 categoryTotals = uiState.categoryTotals,
                                 month = uiState.selectedMonth,
                                 year = uiState.selectedYear,
+                                emojiMap = uiState.categoryEmojiMap,
                                 onCategoryClick = onCategoryClick,
                                 onShowAllClick = onShowAllCategoriesClick
                             )
@@ -156,6 +156,7 @@ fun HomeScreen(
                             expense = expense,
                             onExpenseClick = { onExpenseClick(expense.id) },
                             onDeleteExpense = { viewModel.deleteExpense(expense) },
+                            emojiMap = uiState.categoryEmojiMap,
                             showCategory = true,
                             showDescription = false
                         )
@@ -375,6 +376,7 @@ fun CategoryBreakdown(
     categoryTotals: List<CategoryTotal>,
     month: Int,
     year: Int,
+    emojiMap: Map<String, String>,
     onCategoryClick: (String, Int, Int) -> Unit,
     onShowAllClick: (Int, Int) -> Unit = { _, _ -> }
 ) {
@@ -397,6 +399,7 @@ fun CategoryBreakdown(
             displayedCategories.forEach { categoryTotal ->
                 CategoryItem(
                     categoryTotal = categoryTotal,
+                    emojiMap = emojiMap,
                     onClick = { onCategoryClick(categoryTotal.category, month, year) }
                 )
             }
@@ -415,11 +418,11 @@ fun CategoryBreakdown(
 @Composable
 private fun CategoryItem(
     categoryTotal: CategoryTotal,
+    emojiMap: Map<String, String>,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val categoryEmoji = remember(categoryTotal.category, context) {
-        ExpenseCategories.getCategoryEmoji(context, categoryTotal.category)
+    val categoryEmoji = remember(categoryTotal.category, emojiMap) {
+        ExpenseCategories.getCategoryEmoji(categoryTotal.category, emojiMap)
     }
     val formattedAmount = remember(categoryTotal.total) {
         DateUtils.formatAmount(categoryTotal.total)

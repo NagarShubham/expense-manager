@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,7 +53,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -94,7 +94,7 @@ fun ExpenseDetailScreen(
     onNavigateBack: () -> Unit = {},
     onEditExpense: (Long) -> Unit = {}
 ) {
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
     var expense by remember { mutableStateOf<Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -127,8 +127,8 @@ fun ExpenseDetailScreen(
         } else {
             ExpenseDetailContent(
                 expense = exp,
-                categoryEmoji = remember(exp.category) {
-                    ExpenseCategories.getCategoryEmoji(context, exp.category)
+                categoryEmoji = remember(exp.category, uiState.categoryEmojiMap) {
+                    ExpenseCategories.getCategoryEmoji(exp.category, uiState.categoryEmojiMap)
                 },
                 formattedAmount = remember(exp.amount) { DateUtils.formatAmount(exp.amount) },
                 formattedDate = remember(exp.date) { DateUtils.formatDate(exp.date) },

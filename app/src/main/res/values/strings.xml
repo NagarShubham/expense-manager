@@ -7,7 +7,6 @@
     <string name="action_back">Back</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
-    <string name="cancel">Cancel</string>
 
     <!-- Content Descriptions -->
     <string name="cd_add_expense">Add Expense</string>
@@ -27,22 +26,14 @@
     <string name="home_empty_title">No expenses yet</string>
     <string name="home_empty_subtitle">Tap the + button to add your first expense</string>
     <string name="home_empty_emoji">📊</string>
-    <string name="budget_expected">Expected</string>
-    <string name="budget_used">Used</string>
-    <string name="budget_remaining">Remaining</string>
-    <string name="budget_overspent">Overspent by</string>
     <string name="budget_summary_left">%1$s left of %2$s budget</string>
     <string name="budget_summary_over">%1$s over budget</string>
     <string name="budget_summary_used_of">Used %1$s of %2$s</string>
-    <string name="budget_status_on_track">On track</string>
     <string name="budget_status_over">Over budget</string>
     <string name="budget_percent_used">%1$d%% of budget</string>
     <string name="budget_set_budget">Set monthly budget</string>
-    <string name="budget_edit_budget">Edit budget</string>
-    <string name="budget_dialog_title">Expected monthly expense</string>
     <string name="budget_dialog_hint">Amount</string>
     <string name="budget_dialog_save">Save</string>
-    <string name="cd_set_budget">Set monthly budget</string>
     <string name="budget_screen_title">Monthly budget</string>
     <string name="budget_month">Month</string>
     <string name="budget_year">Year</string>
@@ -73,7 +64,7 @@
     <string name="expense_field_description">Description (Optional)</string>
     <string name="expense_button_add">Add Expense</string>
     <string name="expense_button_update">Update Expense</string>
-    <string name="currency_symbol">$</string>
+    <string name="currency_symbol">₹</string>
 
     <!-- Expense Detail Screen -->
     <string name="detail_title">Expense Details</string>
@@ -123,7 +114,6 @@
     <string name="settings_import_confirm_replace">This will delete all existing expenses, budgets, and category exclusions, then replace them with data from the backup file. This action cannot be undone.</string>
     <string name="settings_import_confirm_merge">Data from the backup file will be added to your existing records. Budgets with the same month and year will be updated. Duplicate expenses may be created.</string>
     <string name="settings_import_confirm_button">Import</string>
-    <string name="settings_actions_label">Actions</string>
     <string name="settings_export_success_default">Export successful</string>
     <string name="settings_export_failed">Export failed: %1$s</string>
     <string name="settings_import_success">Imported %1$d expenses, %2$d budgets, and %3$d category exclusions</string>
@@ -133,42 +123,29 @@
     <string name="settings_import_replace_warning">⚠️ Will delete all current data</string>
     <string name="settings_import_deleted_warning">⚠️ %d current expenses will be deleted</string>
 
-    <!-- Expense Categories -->
-    <string name="category_bills_utilities">Bills &amp; Utilities</string>
-    <string name="category_transportation">Transportation</string>
-    <string name="category_food_dining">Food &amp; Dining</string>
-    <string name="category_personal_care">Personal Care</string>
-    <string name="category_emi">EMI</string>
-    <string name="category_groceries">Groceries</string>
-    <string name="category_investments">Investments</string>
-    <string name="category_travel">Travel</string>
-    <string name="category_shopping">Shopping</string>
-    <string name="category_entertainment">Entertainment</string>
-    <string name="category_healthcare">Healthcare</string>
-    <string name="category_education">Education</string>
-    <string name="category_rent">Rent</string>
-    <string name="category_insurance">Insurance</string>
-    <string name="category_gifts">Gifts</string>
-    <string name="category_baby">Baby</string>
-    <string name="category_other">Other</string>
+    <!-- Manage Categories -->
+    <string name="settings_categories_section">Categories</string>
+    <string name="settings_categories_title">Manage categories</string>
+    <string name="settings_categories_subtitle">Create, edit, reorder, and pick emojis for your expense categories.</string>
+    <string name="manage_categories_title">Manage categories</string>
+    <string name="manage_categories_subtitle">Organize your expense groups</string>
+    <string name="manage_categories_add">Add category</string>
+    <string name="manage_categories_header_title">Your categories</string>
+    <string name="manage_categories_header_subtitle">Tap to edit, hold and drag to reorder</string>
+    <string name="manage_categories_section_label">Categories</string>
+    <string name="manage_categories_reorder">Reorder</string>
+    <string name="manage_categories_empty_title">No categories yet</string>
+    <string name="manage_categories_empty_subtitle">Add a category to start organizing your expenses.</string>
+    <string name="manage_categories_delete">Delete category</string>
+    <string name="category_dialog_add_title">New Category</string>
+    <string name="category_dialog_edit_title">Edit Category</string>
+    <string name="category_dialog_name_label">Category name</string>
+    <string name="category_dialog_pick_emoji">Tap to choose an emoji</string>
+    <string name="category_dialog_save">Save</string>
+    <string name="category_delete_dialog_title">Delete Category</string>
+    <string name="category_delete_dialog_message">Delete \"%s\"? This can\'t be undone.</string>
+    <string name="category_error_blank">Category name can\'t be empty</string>
+    <string name="category_error_duplicate">A category with that name already exists</string>
+    <string name="category_error_in_use">Can\'t delete a category that has expenses</string>
 
-    <string-array name="expense_categories">
-        <item>@string/category_bills_utilities</item>
-        <item>@string/category_transportation</item>
-        <item>@string/category_food_dining</item>
-        <item>@string/category_personal_care</item>
-        <item>@string/category_emi</item>
-        <item>@string/category_baby</item>
-        <item>@string/category_groceries</item>
-        <item>@string/category_investments</item>
-        <item>@string/category_travel</item>
-        <item>@string/category_shopping</item>
-        <item>@string/category_entertainment</item>
-        <item>@string/category_healthcare</item>
-        <item>@string/category_education</item>
-        <item>@string/category_rent</item>
-        <item>@string/category_insurance</item>
-        <item>@string/category_gifts</item>
-        <item>@string/category_other</item>
-    </string-array>
 </resources>
