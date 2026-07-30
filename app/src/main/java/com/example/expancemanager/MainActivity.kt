@@ -25,6 +25,7 @@ import com.example.expancemanager.nav.ManageCategoriesRoute
 import com.example.expancemanager.nav.SettingsRoute
 import com.example.expancemanager.ui.screen.AddEditExpenseScreen
 import com.example.expancemanager.ui.screen.AllCategoriesScreen
+import com.example.expancemanager.ui.screen.BiometricAppGate
 import com.example.expancemanager.ui.screen.BudgetSettingsScreen
 import com.example.expancemanager.ui.screen.CategoryExpensesScreen
 import com.example.expancemanager.ui.screen.ExpenseDetailScreen
@@ -32,6 +33,7 @@ import com.example.expancemanager.ui.screen.HomeScreen
 import com.example.expancemanager.ui.screen.ManageCategoriesScreen
 import com.example.expancemanager.ui.screen.SettingsScreen
 import com.example.expancemanager.ui.theme.ExpanceManagerTheme
+import com.example.expancemanager.util.BiometricAuthenticator
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -41,14 +43,28 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var preferenceRepository: PreferenceRepository
 
+    @Inject
+    lateinit var biometricAuthenticator: BiometricAuthenticator
+
     private val viewModel: ExpenseViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        biometricAuthenticator.bindActivity(this)
         enableEdgeToEdge()
         setContent {
             val isDarkTheme by preferenceRepository.isDarkTheme.collectAsState()
-            ExpanceManagerTheme(darkTheme = isDarkTheme) { MainContent() }
+            val isBiometricLockEnabled by preferenceRepository.isBiometricLockEnabled.collectAsState()
+
+            ExpanceManagerTheme(darkTheme = isDarkTheme) {
+                BiometricAppGate(
+                    isBiometricLockEnabled = isBiometricLockEnabled,
+                    activity = this@MainActivity,
+                    biometricAuthenticator = biometricAuthenticator
+                ) {
+                    MainContent()
+                }
+            }
         }
     }
 

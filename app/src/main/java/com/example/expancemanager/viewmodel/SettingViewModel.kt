@@ -1,6 +1,7 @@
 package com.example.expancemanager.viewmodel
 
 import android.net.Uri
+import androidx.activity.ComponentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.expancemanager.data.BudgetExcludedCategory
@@ -14,6 +15,7 @@ import com.example.expancemanager.data.PreferenceRepository
 import com.example.expancemanager.data.TransactionRunner
 import com.example.expancemanager.util.BackupManager
 import com.example.expancemanager.util.BackupManager.BackupImportResult
+import com.example.expancemanager.util.BiometricAuthenticator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -33,11 +35,14 @@ class SettingViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val backupManager: BackupManager,
     private val preferenceRepository: PreferenceRepository,
-    private val transactionRunner: TransactionRunner
+    private val transactionRunner: TransactionRunner,
+    private val biometricAuthenticator: BiometricAuthenticator
 ) : ViewModel() {
     private val _expenseCount = MutableStateFlow(0)
     val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
     val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
+    val isBiometricLockEnabled: StateFlow<Boolean> = preferenceRepository.isBiometricLockEnabled
+    val isBiometricAvailable: Boolean = biometricAuthenticator.canAuthenticate()
 
     /** Aggregates everything gathered for an export before handing it to [BackupManager]. */
     private data class ExportData(
@@ -215,5 +220,24 @@ class SettingViewModel @Inject constructor(
 
     fun setDarkTheme(enabled: Boolean) {
         preferenceRepository.setDarkTheme(enabled)
+    }
+
+    fun disableBiometricLock() {
+        preferenceRepository.setBiometricLockEnabled(false)
+    }
+
+    fun requestEnableBiometricLock(
+        activity: ComponentActivity,
+        onEnabled: () -> Unit,
+        onFailed: (String) -> Unit
+    ) {
+        biometricAuthenticator.authenticate(
+            activity = activity,
+            onSuccess = {
+                preferenceRepository.setBiometricLockEnabled(true)
+                onEnabled()
+            },
+            onError = onFailed
+        )
     }
 }

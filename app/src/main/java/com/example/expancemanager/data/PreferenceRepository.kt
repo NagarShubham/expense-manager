@@ -26,11 +26,23 @@ class PreferenceRepository @Inject constructor(
     private val _isDarkTheme = MutableStateFlow(loadDarkTheme())
     val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
+    private val _isBiometricLockEnabled = MutableStateFlow(loadBiometricLockEnabled())
+    val isBiometricLockEnabled: StateFlow<Boolean> = _isBiometricLockEnabled.asStateFlow()
+
     fun setDarkTheme(enabled: Boolean) {
         if (_isDarkTheme.value == enabled) return
         prefs.edit { putBoolean(KEY_DARK_THEME, enabled) }
         _isDarkTheme.value = enabled
     }
+
+    fun setBiometricLockEnabled(enabled: Boolean) {
+        if (_isBiometricLockEnabled.value == enabled) return
+        prefs.edit { putBoolean(KEY_BIOMETRIC_LOCK, enabled) }
+        _isBiometricLockEnabled.value = enabled
+    }
+
+    private fun loadBiometricLockEnabled(): Boolean =
+        prefs.getBoolean(KEY_BIOMETRIC_LOCK, false)
 
     private fun loadDarkTheme(): Boolean {
         if (prefs.contains(KEY_DARK_THEME)) {
@@ -50,5 +62,6 @@ class PreferenceRepository @Inject constructor(
         const val PREFS_NAME = "encrypted_app_preferences"
         const val LEGACY_PREFS_NAME = "app_preferences"
         const val KEY_DARK_THEME = "dark_theme"
+        const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
     }
 }

@@ -58,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -82,6 +83,8 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val expenseCount by viewModel.expenseCount.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    val isBiometricLockEnabled by viewModel.isBiometricLockEnabled.collectAsState()
+    val activity = LocalContext.current as? ComponentActivity
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -183,6 +186,43 @@ fun SettingsScreen(
                             ),
                             checked = isDarkTheme,
                             onCheckedChange = viewModel::setDarkTheme,
+                            showDivider = false
+                        )
+                    }
+                }
+
+                SettingsSection(title = stringResource(R.string.settings_security_section)) {
+                    SettingsGroupCard {
+                        SettingsSwitchRow(
+                            iconEmoji = "🔐",
+                            iconContainerColor = MaterialTheme.colorScheme.errorContainer,
+                            title = stringResource(R.string.settings_biometric_lock_title),
+                            subtitle = stringResource(
+                                when {
+                                    !viewModel.isBiometricAvailable -> R.string.settings_biometric_unavailable
+                                    isBiometricLockEnabled -> R.string.settings_biometric_lock_on
+                                    else -> R.string.settings_biometric_lock_off
+                                }
+                            ),
+                            checked = isBiometricLockEnabled,
+                            enabled = viewModel.isBiometricAvailable,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    activity?.let {
+                                        viewModel.requestEnableBiometricLock(
+                                            activity = it,
+                                            onEnabled = {
+                                                context.showToast(context.getString(R.string.biometric_enabled))
+                                            },
+                                            onFailed = { message ->
+                                                context.showToast(message)
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    viewModel.disableBiometricLock()
+                                }
+                            },
                             showDivider = false
                         )
                     }
@@ -472,6 +512,7 @@ private fun SettingsSwitchRow(
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
     showDivider: Boolean
 ) {
     SettingsInsetDivider(showDivider)
@@ -499,7 +540,11 @@ private fun SettingsSwitchRow(
             )
         },
         trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
+            )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )

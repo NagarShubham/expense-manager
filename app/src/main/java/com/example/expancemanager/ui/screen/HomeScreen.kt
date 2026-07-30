@@ -236,7 +236,8 @@ private data class BudgetDerived(
     val overspent: Double?,
     val isOverspent: Boolean,
     val progress: Float,
-    val percentUsed: Int
+    val percentUsed: Int,
+    val percentOver: Int
 )
 
 @Composable
@@ -251,8 +252,14 @@ fun BudgetSummaryCard(
         val remaining = exp?.let { (it - totalAmountForBudget).coerceAtLeast(0.0) }
         val overspent = exp?.let { (totalAmountForBudget - it).coerceAtLeast(0.0) }
         val isOverspent = (overspent ?: 0.0) > 0
-        val progress = if (exp != null && exp > 0) (totalAmountForBudget / exp).toFloat().coerceIn(0f, 1f) else 0f
-        val percentUsed = if (exp != null && exp > 0) ((totalAmountForBudget / exp) * 100).toInt().coerceIn(0, 999) else 0
+        val budgetRatio = if (exp != null && exp > 0) totalAmountForBudget / exp else 0.0
+        val progress = budgetRatio.toFloat().coerceIn(0f, 1f)
+        val percentUsed = (budgetRatio * 100).toInt().coerceIn(0, 999)
+        val percentOver = if (budgetRatio > 1.0) {
+            ((budgetRatio - 1.0) * 100).toInt().coerceIn(0, 999)
+        } else {
+            0
+        }
         BudgetDerived(
             formattedTotal = DateUtils.formatAmount(totalAmount),
             formattedExpected = exp?.let { DateUtils.formatAmount(it) },
@@ -261,7 +268,8 @@ fun BudgetSummaryCard(
             overspent = overspent,
             isOverspent = isOverspent,
             progress = progress,
-            percentUsed = percentUsed
+            percentUsed = percentUsed,
+            percentOver = percentOver
         )
     }
 
@@ -319,7 +327,11 @@ fun BudgetSummaryCard(
                         color = if (derived.isOverspent) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary
                     ) {
                         Text(
-                            text = if (derived.isOverspent) stringResource(R.string.budget_status_over) else stringResource(R.string.budget_percent_used, derived.percentUsed),
+                            text = if (derived.isOverspent) {
+                                stringResource(R.string.budget_percent_over, derived.percentOver)
+                            } else {
+                                stringResource(R.string.budget_percent_used, derived.percentUsed)
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = if (derived.isOverspent) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary,
