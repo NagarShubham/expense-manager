@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
  * Multi-table writes run through [transactionRunner] rather than calling Room's
  * `withTransaction` directly, which keeps this class decoupled from Room and unit-testable.
  */
-class CategoryRepository(
+internal class CategoryRepository(
     private val categoryDao: CategoryDao,
     private val expenseDao: ExpenseDao,
     private val budgetExcludedCategoryDao: BudgetExcludedCategoryDao,
@@ -27,9 +27,9 @@ class CategoryRepository(
         data object InUse : CategoryResult
     }
 
-    fun getCategories(): Flow<List<Category>> = categoryDao.getAllOrdered()
+    internal fun getCategories(): Flow<List<Category>> = categoryDao.getAllOrdered()
 
-    suspend fun addCategory(
+    internal suspend fun addCategory(
         name: String,
         emoji: String
     ): CategoryResult {
@@ -47,7 +47,7 @@ class CategoryRepository(
      * row is replaced and the change cascades to expenses and budget exclusions,
      * all in one transaction.
      */
-    suspend fun updateCategory(
+    internal suspend fun updateCategory(
         oldName: String,
         newName: String,
         emoji: String
@@ -86,7 +86,7 @@ class CategoryRepository(
      * exclusions for the name (in the same transaction) so no orphan exclusion rows
      * survive to affect a future category that reuses the name.
      */
-    suspend fun deleteCategory(name: String): CategoryResult {
+    internal suspend fun deleteCategory(name: String): CategoryResult {
         var result: CategoryResult = CategoryResult.Success
         transactionRunner {
             if (expenseDao.countExpensesInCategory(name) > 0) {
@@ -104,7 +104,7 @@ class CategoryRepository(
      * The per-row updates run in one transaction, so reordering ~dozens of categories is a
      * single atomic write — fine at this scale, and avoids a variable-length CASE query.
      */
-    suspend fun reorder(orderedNames: List<String>) {
+    internal suspend fun reorder(orderedNames: List<String>) {
         transactionRunner {
             orderedNames.forEachIndexed { index, name ->
                 categoryDao.updateSortOrder(name, index)
@@ -112,15 +112,13 @@ class CategoryRepository(
         }
     }
 
-    suspend fun getAllForExport(): List<Category> = categoryDao.getAllOrderedOnce()
+    internal suspend fun getAllForExport(): List<Category> = categoryDao.getAllOrderedOnce()
 
-    suspend fun insertCategories(categories: List<Category>) {
+    internal suspend fun insertCategories(categories: List<Category>) {
         if (categories.isNotEmpty()) {
             categoryDao.insertAll(categories)
         }
     }
 
-    suspend fun deleteAllCategories() = categoryDao.deleteAll()
-
-    suspend fun count(): Int = categoryDao.count()
+    internal suspend fun deleteAllCategories() = categoryDao.deleteAll()
 }

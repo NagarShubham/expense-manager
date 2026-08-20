@@ -88,7 +88,7 @@ private data class ExpenseDetailField(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseDetailScreen(
+internal fun ExpenseDetailScreen(
     expenseId: Long,
     viewModel: ExpenseViewModel,
     onNavigateBack: () -> Unit = {},

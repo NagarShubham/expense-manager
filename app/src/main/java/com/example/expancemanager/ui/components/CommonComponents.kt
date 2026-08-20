@@ -2,12 +2,37 @@ package com.example.expancemanager.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,6 +40,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expancemanager.R
 import com.example.expancemanager.data.Expense
@@ -25,7 +51,7 @@ import com.example.expancemanager.util.ExpenseCategories
  * Reusable confirmation dialog for deleting expenses
  */
 @Composable
-fun DeleteConfirmationDialog(
+internal fun DeleteConfirmationDialog(
     showDialog: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
@@ -57,11 +83,13 @@ fun DeleteConfirmationDialog(
 }
 
 /**
- * Reusable expense item card used across different screens
- * Optimized for smooth scrolling in LazyColumn
+ * Expense row used on Home and category lists.
+ * Swiping end-to-start (or tapping delete) opens a confirmation dialog;
+ * the expense is removed only after confirm.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseItemCard(
+internal fun ExpenseItemCard(
     expense: Expense,
     onExpenseClick: () -> Unit,
     onDeleteExpense: () -> Unit,
@@ -71,46 +99,54 @@ fun ExpenseItemCard(
     modifier: Modifier = Modifier
 ) {
     var showDeleteDialog by remember(expense.id) { mutableStateOf(false) }
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                showDeleteDialog = true
+            }
+            false
+        },
+        positionalThreshold = { fullWidth -> fullWidth * 0.5f }
+    )
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = dimensionResource(R.dimen.spacing_tiny))
-            .clickable { onExpenseClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = dimensionResource(R.dimen.card_elevation_default))
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier.fillMaxWidth(),
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true,
+        backgroundContent = { SwipeDeleteBackground() }
     ) {
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_default)),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(vertical = dimensionResource(R.dimen.spacing_tiny))
+                .clickable { onExpenseClick() },
+            elevation = CardDefaults.cardElevation(defaultElevation = dimensionResource(R.dimen.card_elevation_default))
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(dimensionResource(R.dimen.spacing_default)),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category emoji icon
-                CategoryIcon(category = expense.category, emojiMap = emojiMap)
-
-                Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
-
-                // Expense details
-                ExpenseDetails(
-                    title = expense.title,
-                    category = expense.category,
-                    date = expense.date,
-                    description = expense.description,
-                    showCategory = showCategory,
-                    showDescription = showDescription
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    CategoryIcon(category = expense.category, emojiMap = emojiMap)
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
+                    ExpenseDetails(
+                        title = expense.title,
+                        category = expense.category,
+                        date = expense.date,
+                        description = expense.description,
+                        showCategory = showCategory,
+                        showDescription = showDescription
+                    )
+                }
+                ExpenseActions(amount = expense.amount)
             }
-
-            // Amount and delete button
-            ExpenseActions(
-                amount = expense.amount,
-                onDeleteClick = { showDeleteDialog = true }
-            )
         }
     }
     DeleteConfirmationDialog(
@@ -118,6 +154,25 @@ fun ExpenseItemCard(
         onDismiss = { showDeleteDialog = false },
         onConfirm = onDeleteExpense
     )
+}
+
+@Composable
+private fun SwipeDeleteBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = dimensionResource(R.dimen.spacing_tiny))
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.errorContainer),
+        contentAlignment = Alignment.CenterEnd
+    ) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = stringResource(R.string.cd_swipe_to_delete),
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_default))
+        )
+    }
 }
 
 @Composable
@@ -179,23 +234,14 @@ private fun ExpenseDetails(
 @Composable
 private fun ExpenseActions(
     amount: Double,
-    onDeleteClick: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = remember(amount) { DateUtils.formatAmount(amount) },
+            text = remember(amount) { DateUtils.formatAmount(amount, hideZeroDecimals = true) },
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.error
         )
-
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = stringResource(R.string.action_delete),
-                tint = MaterialTheme.colorScheme.error
-            )
-        }
     }
 }
 
@@ -203,7 +249,7 @@ private fun ExpenseActions(
  * Reusable empty state message
  */
 @Composable
-fun EmptyStateMessage(
+internal fun EmptyStateMessage(
     emoji: String,
     title: String,
     subtitle: String

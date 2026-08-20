@@ -6,13 +6,13 @@ package com.example.expancemanager.util
  * feel complete for category icons without bundling a large dataset. Rendered with the
  * platform emoji font, matching how emojis already appear throughout the app.
  */
-data class EmojiGroup(
+internal data class EmojiGroup(
     val title: String,
     val emojis: List<String>
 )
 
-object EmojiData {
-    val groups: List<EmojiGroup> = listOf(
+internal object EmojiData {
+    internal val groups: List<EmojiGroup> = listOf(
         EmojiGroup(
             "Smileys & People",
             listOf(

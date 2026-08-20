@@ -21,15 +21,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Calendar
 import javax.inject.Inject
 
-data class ExpenseUiState(
+internal data class ExpenseUiState(
     val expenses: List<Expense> = emptyList(),
     val totalAmount: Double = 0.0,
     val categoryTotals: List<CategoryTotal> = emptyList(),
-    val selectedMonth: Int = Calendar.getInstance().get(Calendar.MONTH),
-    val selectedYear: Int = Calendar.getInstance().get(Calendar.YEAR),
+    val selectedMonth: Int = DateUtils.currentMonthYear().first,
+    val selectedYear: Int = DateUtils.currentMonthYear().second,
     /** Expected monthly expense (budget) for the selected month; null if not set */
     val expectedMonthlyAmount: Double? = null,
     /** Amount that counts toward budget (total minus excluded categories). Used for Used/Remaining/Progress. */
@@ -49,26 +48,26 @@ data class ExpenseUiState(
 }
 
 @HiltViewModel
-class ExpenseViewModel @Inject constructor(
+internal class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val budgetRepository: BudgetRepository,
     private val categoryRepository: CategoryRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ExpenseUiState())
-    val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+    internal val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
     /** Single source of truth for which month/year to load; one collector reacts to this. */
     private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
-    val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
+    internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
 
     /** Pushes a route onto the back stack. */
-    fun navigateTo(route: AppRoute) {
+    internal fun navigateTo(route: AppRoute) {
         backStack.add(route)
     }
 
     /** Pops the current route; no-op if only the root (e.g. Home) remains. */
-    fun navigateBack() {
+    internal fun navigateBack() {
         if (backStack.size > 1) {
             backStack.removeAt(backStack.lastIndex)
         }
@@ -113,43 +112,43 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 
-    fun loadExpensesForMonth(
+    internal fun loadExpensesForMonth(
         month: Int,
         year: Int
     ) {
         selectedMonthYearFlow.value = month to year
     }
 
-    fun insertExpense(expense: Expense) {
+    internal fun insertExpense(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             expenseRepository.insertExpense(expense)
         }
     }
 
-    fun updateExpense(expense: Expense) {
+    internal fun updateExpense(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             expenseRepository.updateExpense(expense)
         }
     }
 
-    fun deleteExpense(expense: Expense) {
+    internal fun deleteExpense(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             expenseRepository.deleteExpense(expense)
         }
     }
 
-    suspend fun getExpenseById(id: Long): Expense? =
+    internal suspend fun getExpenseById(id: Long): Expense? =
         withContext(Dispatchers.IO) {
             expenseRepository.getExpenseById(id)
         }
 
-    fun changeMonth(increment: Int) {
+    internal fun changeMonth(increment: Int) {
         val (month, year) = selectedMonthYearFlow.value
         val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
         loadExpensesForMonth(newMonth, newYear)
     }
 
-    fun goToCurrentMonth() {
+    internal fun goToCurrentMonth() {
         val (month, year) = DateUtils.currentMonthYear()
         loadExpensesForMonth(month, year)
     }

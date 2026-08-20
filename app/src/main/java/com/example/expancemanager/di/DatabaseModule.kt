@@ -20,10 +20,10 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
+internal object DatabaseModule {
     @Provides
     @Singleton
-    fun provideExpenseDatabase(
+    internal fun provideExpenseDatabase(
         @ApplicationContext context: Context
     ): ExpenseDatabase {
         // getDatabase() opens SQLCipher + reads from the Android Keystore.
@@ -36,39 +36,39 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideExpenseDao(database: ExpenseDatabase): ExpenseDao = database.expenseDao()
+    internal fun provideExpenseDao(database: ExpenseDatabase): ExpenseDao = database.expenseDao()
 
     @Provides
     @Singleton
-    fun provideExpenseRepository(expenseDao: ExpenseDao): ExpenseRepository = ExpenseRepository(expenseDao)
+    internal fun provideExpenseRepository(expenseDao: ExpenseDao): ExpenseRepository = ExpenseRepository(expenseDao)
 
     @Provides
     @Singleton
-    fun provideMonthlyBudgetDao(database: ExpenseDatabase): MonthlyBudgetDao = database.monthlyBudgetDao()
+    internal fun provideMonthlyBudgetDao(database: ExpenseDatabase): MonthlyBudgetDao = database.monthlyBudgetDao()
 
     @Provides
     @Singleton
-    fun provideBudgetExcludedCategoryDao(database: ExpenseDatabase): BudgetExcludedCategoryDao = database.budgetExcludedCategoryDao()
+    internal fun provideBudgetExcludedCategoryDao(database: ExpenseDatabase): BudgetExcludedCategoryDao = database.budgetExcludedCategoryDao()
 
     @Provides
     @Singleton
-    fun provideBudgetRepository(
+    internal fun provideBudgetRepository(
         monthlyBudgetDao: MonthlyBudgetDao,
         budgetExcludedCategoryDao: BudgetExcludedCategoryDao
     ): BudgetRepository = BudgetRepository(monthlyBudgetDao, budgetExcludedCategoryDao)
 
     @Provides
     @Singleton
-    fun provideCategoryDao(database: ExpenseDatabase): CategoryDao = database.categoryDao()
+    internal fun provideCategoryDao(database: ExpenseDatabase): CategoryDao = database.categoryDao()
 
     @Provides
     @Singleton
-    fun provideTransactionRunner(database: ExpenseDatabase): TransactionRunner =
+    internal fun provideTransactionRunner(database: ExpenseDatabase): TransactionRunner =
         TransactionRunner { block -> database.withTransaction { block() } }
 
     @Provides
     @Singleton
-    fun provideCategoryRepository(
+    internal fun provideCategoryRepository(
         categoryDao: CategoryDao,
         expenseDao: ExpenseDao,
         budgetExcludedCategoryDao: BudgetExcludedCategoryDao,

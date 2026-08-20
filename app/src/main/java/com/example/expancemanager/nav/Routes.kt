@@ -1,32 +1,34 @@
 package com.example.expancemanager.nav
 
-sealed interface AppRoute
+internal sealed interface AppRoute
 
-data object HomeScreenRoute : AppRoute
+internal data object HomeScreenRoute : AppRoute
 
-data object AddExpenseRoute : AppRoute
+internal data object AddExpenseRoute : AppRoute
 
-data class EditExpenseRoute(
+internal data class EditExpenseRoute(
     val expenseId: Long
 ) : AppRoute
 
-data class ExpenseDetailRoute(
+internal data class ExpenseDetailRoute(
     val expenseId: Long
 ) : AppRoute
 
-data class CategoryExpensesRoute(
+internal data class CategoryExpensesRoute(
     val category: String,
     val month: Int,
     val year: Int
 ) : AppRoute
 
-data class AllCategoriesRoute(
+internal data class AllCategoriesRoute(
     val month: Int,
     val year: Int
 ) : AppRoute
 
-data object SettingsRoute : AppRoute
+internal data object ReportsRoute : AppRoute
 
-data object BudgetSettingsRoute : AppRoute
+internal data object SettingsRoute : AppRoute
 
-data object ManageCategoriesRoute : AppRoute
+internal data object BudgetSettingsRoute : AppRoute
+
+internal data object ManageCategoriesRoute : AppRoute

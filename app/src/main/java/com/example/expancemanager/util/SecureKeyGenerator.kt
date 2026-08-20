@@ -9,7 +9,7 @@ import java.security.SecureRandom
  * Secure key generator for SQLCipher database encryption
  * Uses EncryptedSharedPreferences with MasterKey for secure storage
  */
-object SecureKeyGenerator {
+internal object SecureKeyGenerator {
     private const val PREFS_NAME = "secure_expense_prefs"
     private const val KEY_PASSPHRASE = "db_passphrase"
 
@@ -22,7 +22,7 @@ object SecureKeyGenerator {
      * Passphrase is stored securely using EncryptedSharedPreferences
      * Cached in memory for performance
      */
-    fun getOrGenerateKey(context: Context): String {
+    internal fun getOrGenerateKey(context: Context): String {
         // Return cached passphrase if available
         cachedPassphrase?.let { return it }
 

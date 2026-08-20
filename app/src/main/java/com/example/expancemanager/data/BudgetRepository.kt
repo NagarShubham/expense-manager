@@ -6,33 +6,33 @@ import kotlinx.coroutines.flow.Flow
  * Single entry point for budget-related data. Wraps [MonthlyBudgetDao] and
  * [BudgetExcludedCategoryDao] to provide a consistent data layer and simplify ViewModels.
  */
-class BudgetRepository(
+internal class BudgetRepository(
     private val monthlyBudgetDao: MonthlyBudgetDao,
     private val budgetExcludedCategoryDao: BudgetExcludedCategoryDao
 ) {
-    fun getBudgetByMonthYear(
+    internal fun getBudgetByMonthYear(
         month: Int,
         year: Int
     ): Flow<MonthlyBudget?> = monthlyBudgetDao.getBudgetByMonthYear(month, year)
 
-    suspend fun getBudgetByMonthYearOnce(
+    internal suspend fun getBudgetByMonthYearOnce(
         month: Int,
         year: Int
     ): MonthlyBudget? = monthlyBudgetDao.getBudgetByMonthYearOnce(month, year)
 
-    suspend fun insertOrUpdateBudget(budget: MonthlyBudget) = monthlyBudgetDao.insertOrUpdateBudget(budget)
+    internal suspend fun insertOrUpdateBudget(budget: MonthlyBudget) = monthlyBudgetDao.insertOrUpdateBudget(budget)
 
-    suspend fun deleteBudgetByMonthYear(
+    internal suspend fun deleteBudgetByMonthYear(
         month: Int,
         year: Int
     ) = monthlyBudgetDao.deleteByMonthYear(month, year)
 
-    fun getExcludedCategoriesByMonthYear(
+    internal fun getExcludedCategoriesByMonthYear(
         month: Int,
         year: Int
     ): Flow<List<String>> = budgetExcludedCategoryDao.getExcludedByMonthYear(month, year)
 
-    suspend fun setCategoryExcluded(
+    internal suspend fun setCategoryExcluded(
         month: Int,
         year: Int,
         category: String,
@@ -47,24 +47,24 @@ class BudgetRepository(
         }
     }
 
-    suspend fun getAllBudgetsForExport(): List<MonthlyBudget> = monthlyBudgetDao.getAllBudgets()
+    internal suspend fun getAllBudgetsForExport(): List<MonthlyBudget> = monthlyBudgetDao.getAllBudgets()
 
-    suspend fun getAllExcludedCategoriesForExport(): List<BudgetExcludedCategory> =
+    internal suspend fun getAllExcludedCategoriesForExport(): List<BudgetExcludedCategory> =
         budgetExcludedCategoryDao.getAllExcluded()
 
-    suspend fun insertBudgets(budgets: List<MonthlyBudget>) {
+    internal suspend fun insertBudgets(budgets: List<MonthlyBudget>) {
         if (budgets.isNotEmpty()) {
             monthlyBudgetDao.insertBudgets(budgets)
         }
     }
 
-    suspend fun insertExcludedCategories(categories: List<BudgetExcludedCategory>) {
+    internal suspend fun insertExcludedCategories(categories: List<BudgetExcludedCategory>) {
         if (categories.isNotEmpty()) {
             budgetExcludedCategoryDao.insertExcludedList(categories)
         }
     }
 
-    suspend fun deleteAllBudgetData() {
+    internal suspend fun deleteAllBudgetData() {
         monthlyBudgetDao.deleteAllBudgets()
         budgetExcludedCategoryDao.deleteAllExcluded()
     }

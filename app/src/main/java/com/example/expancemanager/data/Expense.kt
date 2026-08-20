@@ -11,7 +11,7 @@ import androidx.room.PrimaryKey
         Index(value = ["category"])
     ]
 )
-data class Expense(
+internal data class Expense(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,

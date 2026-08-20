@@ -45,6 +45,20 @@ class DateUtilsTest {
     }
 
     @Test
+    fun formatAmount_hidesZeroDecimalsForWholeRupees() {
+        val formatted = DateUtils.formatAmount(100.0, hideZeroDecimals = true)
+
+        assertThat(formatted).isEqualTo("₹100")
+    }
+
+    @Test
+    fun formatAmount_keepsPaiseWhenHidingZeroDecimals() {
+        val formatted = DateUtils.formatAmount(100.5, hideZeroDecimals = true)
+
+        assertThat(formatted).isEqualTo("₹100.50")
+    }
+
+    @Test
     fun formatAmount_isLocaleIndependent() {
         // Should produce INR formatting regardless of the JVM default locale at test time.
         val previousDefault = Locale.getDefault()
@@ -78,5 +92,45 @@ class DateUtilsTest {
         assertThat(endCalendar.get(Calendar.MINUTE)).isEqualTo(59)
         assertThat(endCalendar.get(Calendar.SECOND)).isEqualTo(59)
         assertThat(endCalendar.get(Calendar.MILLISECOND)).isEqualTo(999)
+    }
+
+    @Test
+    fun yearMonthFrom_readsLocalCalendarMonthAndYear() {
+        val calendar = Calendar.getInstance().apply {
+            set(2024, Calendar.AUGUST, 13, 10, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val yearMonth = DateUtils.yearMonthFrom(calendar.timeInMillis)
+
+        assertThat(yearMonth.month).isEqualTo(Calendar.AUGUST)
+        assertThat(yearMonth.year).isEqualTo(2024)
+    }
+
+    @Test
+    fun utcPickerDate_roundTripsToSameCivilDate() {
+        val local = Calendar.getInstance().apply {
+            set(2024, Calendar.MARCH, 10, 18, 30, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val utcPicker = DateUtils.localMillisToUtcPickerDate(local.timeInMillis)
+        val localStart = DateUtils.utcPickerDateToLocalStart(utcPicker)
+        val localEnd = DateUtils.utcPickerDateToLocalEnd(utcPicker)
+
+        val startCal = Calendar.getInstance().apply { timeInMillis = localStart }
+        assertThat(startCal.get(Calendar.YEAR)).isEqualTo(2024)
+        assertThat(startCal.get(Calendar.MONTH)).isEqualTo(Calendar.MARCH)
+        assertThat(startCal.get(Calendar.DAY_OF_MONTH)).isEqualTo(10)
+        assertThat(startCal.get(Calendar.HOUR_OF_DAY)).isEqualTo(0)
+        assertThat(startCal.get(Calendar.MINUTE)).isEqualTo(0)
+        assertThat(startCal.get(Calendar.SECOND)).isEqualTo(0)
+        assertThat(startCal.get(Calendar.MILLISECOND)).isEqualTo(0)
+
+        val endCal = Calendar.getInstance().apply { timeInMillis = localEnd }
+        assertThat(endCal.get(Calendar.DAY_OF_MONTH)).isEqualTo(10)
+        assertThat(endCal.get(Calendar.HOUR_OF_DAY)).isEqualTo(23)
+        assertThat(endCal.get(Calendar.MINUTE)).isEqualTo(59)
+        assertThat(endCal.get(Calendar.SECOND)).isEqualTo(59)
+        assertThat(endCal.get(Calendar.MILLISECOND)).isEqualTo(999)
     }
 }

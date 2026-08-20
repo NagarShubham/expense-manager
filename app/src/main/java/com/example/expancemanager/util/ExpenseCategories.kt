@@ -1,6 +1,6 @@
 package com.example.expancemanager.util
 
-object ExpenseCategories {
+internal object ExpenseCategories {
     const val FALLBACK_EMOJI = "💰"
 
     /**
@@ -11,7 +11,7 @@ object ExpenseCategories {
      * The names MUST match the original English values so that expenses created
      * before categories became editable still resolve.
      */
-    val DEFAULT_CATEGORIES: List<Pair<String, String>> = listOf(
+    internal val DEFAULT_CATEGORIES: List<Pair<String, String>> = listOf(
         "Bills & Utilities" to "💡",
         "Transportation" to "🚗",
         "Food & Dining" to "🍔",
@@ -39,7 +39,7 @@ object ExpenseCategories {
      * from the categories table) and falling back to the built-in default set, then
      * [FALLBACK_EMOJI]. Safe to call before the DB has loaded (empty map).
      */
-    fun getCategoryEmoji(
+    internal fun getCategoryEmoji(
         category: String,
         emojiMap: Map<String, String>
     ): String = emojiMap[category] ?: defaultEmojiByName[category] ?: FALLBACK_EMOJI

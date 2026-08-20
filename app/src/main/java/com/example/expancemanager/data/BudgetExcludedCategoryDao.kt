@@ -7,7 +7,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface BudgetExcludedCategoryDao {
+internal interface BudgetExcludedCategoryDao {
     @Query("SELECT category FROM budget_excluded_categories WHERE month = :month AND year = :year ORDER BY category")
     fun getExcludedByMonthYear(
         month: Int,

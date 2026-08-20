@@ -20,14 +20,14 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
     version = 7,
     exportSchema = false
 )
-abstract class ExpenseDatabase : RoomDatabase() {
-    abstract fun expenseDao(): ExpenseDao
+internal abstract class ExpenseDatabase : RoomDatabase() {
+    internal abstract fun expenseDao(): ExpenseDao
 
-    abstract fun monthlyBudgetDao(): MonthlyBudgetDao
+    internal abstract fun monthlyBudgetDao(): MonthlyBudgetDao
 
-    abstract fun budgetExcludedCategoryDao(): BudgetExcludedCategoryDao
+    internal abstract fun budgetExcludedCategoryDao(): BudgetExcludedCategoryDao
 
-    abstract fun categoryDao(): CategoryDao
+    internal abstract fun categoryDao(): CategoryDao
 
     companion object {
         @Volatile
@@ -164,7 +164,7 @@ abstract class ExpenseDatabase : RoomDatabase() {
          * Gets or creates an encrypted database instance.
          * Uses double-checked locking so only one instance is created under concurrent access.
          */
-        fun getDatabase(context: Context): ExpenseDatabase =
+        internal fun getDatabase(context: Context): ExpenseDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
                     val passphrase = SecureKeyGenerator.getOrGenerateKey(context)

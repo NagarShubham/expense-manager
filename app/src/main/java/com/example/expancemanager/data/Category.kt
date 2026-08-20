@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  * [sortOrder] controls the display order the user arranges.
  */
 @Entity(tableName = "categories")
-data class Category(
+internal data class Category(
     @PrimaryKey val name: String,
     val emoji: String,
     val sortOrder: Int

@@ -87,7 +87,7 @@ private object ManageCategoriesShapes {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManageCategoriesScreen(
+internal fun ManageCategoriesScreen(
     viewModel: CategoryViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {

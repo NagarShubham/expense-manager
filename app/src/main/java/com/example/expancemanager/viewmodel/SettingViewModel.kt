@@ -20,7 +20,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +28,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class SettingViewModel @Inject constructor(
+internal class SettingViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val budgetRepository: BudgetRepository,
     private val categoryRepository: CategoryRepository,
@@ -39,10 +38,10 @@ class SettingViewModel @Inject constructor(
     private val biometricAuthenticator: BiometricAuthenticator
 ) : ViewModel() {
     private val _expenseCount = MutableStateFlow(0)
-    val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
-    val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
-    val isBiometricLockEnabled: StateFlow<Boolean> = preferenceRepository.isBiometricLockEnabled
-    val isBiometricAvailable: Boolean = biometricAuthenticator.canAuthenticate()
+    internal val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
+    internal val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
+    internal val isBiometricLockEnabled: StateFlow<Boolean> = preferenceRepository.isBiometricLockEnabled
+    internal val isBiometricAvailable: Boolean = biometricAuthenticator.canAuthenticate()
 
     /** Aggregates everything gathered for an export before handing it to [BackupManager]. */
     private data class ExportData(
@@ -63,7 +62,7 @@ class SettingViewModel @Inject constructor(
      * @param uri URI where to save the backup file
      * @return Result indicating success or failure
      */
-    suspend fun exportData(uri: Uri): Result<String> =
+    internal suspend fun exportData(uri: Uri): Result<String> =
         withContext(Dispatchers.IO) {
             try {
                 val export = coroutineScope {
@@ -106,7 +105,7 @@ class SettingViewModel @Inject constructor(
      * @param replaceExisting If true, deletes existing data before import
      * @return Result with counts of imported records per type
      */
-    suspend fun importData(
+    internal suspend fun importData(
         uri: Uri,
         replaceExisting: Boolean = false
     ): Result<BackupImportResult> =
@@ -153,80 +152,17 @@ class SettingViewModel @Inject constructor(
             }
         }
 
-    /** Set or update expected monthly expense (budget) for the given month/year. */
-    fun setMonthlyBudget(
-        month: Int,
-        year: Int,
-        expectedAmount: Double
-    ) {
-        viewModelScope.launch { insertBudget(month, year, expectedAmount) }
-    }
+    internal fun generateBackupFileName() = backupManager.generateBackupFileName()
 
-    /** Returns current expected budget for the given month/year, or null if not set. */
-    suspend fun getExpectedBudgetForMonth(
-        month: Int,
-        year: Int
-    ): Double? =
-        withContext(Dispatchers.IO) {
-            budgetRepository.getBudgetByMonthYearOnce(month, year)?.expectedAmount
-        }
-
-    /** Set monthly budget and wait for the write to complete (e.g. before navigating back). */
-    suspend fun setMonthlyBudgetAndWait(
-        month: Int,
-        year: Int,
-        expectedAmount: Double
-    ) = insertBudget(month, year, expectedAmount)
-
-    /** Removes the budget for the given month/year. */
-    fun clearMonthlyBudget(
-        month: Int,
-        year: Int
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            budgetRepository.deleteBudgetByMonthYear(month, year)
-        }
-    }
-
-    /** Sets whether a category is excluded from the monthly budget for the given month/year. Excluded categories don't count toward Used/Remaining/Progress. */
-    fun setCategoryExcludedFromBudget(
-        month: Int,
-        year: Int,
-        category: String,
-        excluded: Boolean
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            budgetRepository.setCategoryExcluded(month, year, category, excluded)
-        }
-    }
-
-    /** Flow of category names excluded from budget for the given month/year. Used by Budget Settings screen. */
-    fun getExcludedByMonthYear(
-        month: Int,
-        year: Int
-    ): Flow<List<String>> = budgetRepository.getExcludedCategoriesByMonthYear(month, year)
-
-    private suspend fun insertBudget(
-        month: Int,
-        year: Int,
-        expectedAmount: Double
-    ) = withContext(Dispatchers.IO) {
-        budgetRepository.insertOrUpdateBudget(
-            MonthlyBudget(month = month, year = year, expectedAmount = expectedAmount)
-        )
-    }
-
-    fun generateBackupFileName() = backupManager.generateBackupFileName()
-
-    fun setDarkTheme(enabled: Boolean) {
+    internal fun setDarkTheme(enabled: Boolean) {
         preferenceRepository.setDarkTheme(enabled)
     }
 
-    fun disableBiometricLock() {
+    internal fun disableBiometricLock() {
         preferenceRepository.setBiometricLockEnabled(false)
     }
 
-    fun requestEnableBiometricLock(
+    internal fun requestEnableBiometricLock(
         activity: ComponentActivity,
         onEnabled: () -> Unit,
         onFailed: (String) -> Unit

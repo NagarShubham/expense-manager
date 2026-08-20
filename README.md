@@ -1,270 +1,198 @@
-# Expense Manager Android App
+# Expense
 
-A modern, feature-rich Android expense tracking application built with Jetpack Compose and Material Design 3.
+**Private, offline expense tracking for Android** — monthly budgets, custom categories, and spending insights. Data never leaves the device. Amounts are in Indian Rupees (₹).
+
+Built with **Kotlin**, **Jetpack Compose**, **Material 3**, **Hilt**, **Room**, and **SQLCipher**.
+
+[Features](#features) · [Architecture](#architecture) · [Screens](#screens) · [Data](#data-model) · [Build](#build--run) · [Security](#security) · [Docs](#further-reading)
+
+---
+
+## Why this app
+
+| | |
+| --- | --- |
+| **Offline-first** | No account, no network, no analytics SDK. Room is the source of truth. |
+| **Encrypted at rest** | SQLCipher AES-256; passphrase in Android Keystore + EncryptedSharedPreferences. |
+| **INR-native** | Indian grouping (lakh/crore) and the ₹ symbol throughout. |
+| **Yours to shape** | Rename, reorder, and add categories; exclude some from the monthly budget. |
+
+Uninstalling the app **destroys the encryption key**. Export a backup from Settings before you wipe the install.
+
+---
 
 ## Features
 
-### ✨ Core Functionality
-- **Month-wise Expense Tracking**: View and manage expenses organized by month
-- **Add/Edit/Delete Expenses**: Full CRUD operations for expense management
-- **Category Management**: 16 pre-defined expense categories with emoji icons
-- **Expense Details**: View detailed information for each expense
-- **Real-time Updates**: Live data updates using Kotlin Flow
-- **Backup & Restore**: Export and import your data as JSON files for safety
+### Track
+- Browse expenses **by month** (previous / next, jump to today).
+- Add, edit, delete (swipe-to-delete with confirmation).
+- Title, amount, category, date, optional description.
 
-### 📊 Analytics & Insights
-- **Monthly Total**: See total expenses for the selected month
-- **Category Breakdown**: View top 5 spending categories with totals
-- **Date Range Filtering**: Navigate between different months easily
+### Budget
+- Set an **expected monthly amount** (Settings → Monthly budget).
+- Home shows used vs remaining or overspent, plus progress.
+- **Exclude categories** from budget math; they still appear in lists and breakdowns.
 
-### 🎨 User Interface
-- **Material Design 3**: Modern, beautiful UI with dynamic color support
-- **Dark Mode**: Full dark theme support
-- **Edge-to-Edge Display**: Immersive full-screen experience
-- **Intuitive Navigation**: Simple and smooth navigation between screens
-- **Empty State**: Helpful message when no expenses exist
+### Categories
+- **17 defaults** (emoji + English names), fully editable.
+- Home: **top 5** for the month, then “view all”.
+- Drill into one category for that month.
 
-### 🔐 Security Features
-- **Database Encryption**: AES-256 bit encryption using SQLCipher
-- **Secure Key Storage**: Android Keystore with EncryptedSharedPreferences
-- **Hardware Security**: Leverages device hardware security when available
-- **No Hardcoded Keys**: Cryptographically secure random key generation
-- **Bank-Level Protection**: FIPS 140-2 compliant encryption standard
-- **Data Backup**: Export/import functionality for data safety and portability
+### Insights
+Open **Settings → Insights → Spending insights**.
 
-### ⚡ Performance Features
-- **Database Indexes**: 50-70% faster queries on date and category
-- **WAL Mode**: Write-Ahead Logging for better concurrency
-- **UI Optimization**: Memoization reduces recompositions by 40-60%
-- **Coroutine Dispatchers**: Proper threading prevents UI blocking
-- **Memory Caching**: 90% faster encryption key retrieval
-- **R8 Optimization**: 50% smaller release APK size
+| Period | Meaning |
+| --- | --- |
+| Last 6 months | Rolling six calendar months including the current one |
+| This year | Calendar year-to-date (January through the current month) |
+| Custom | Material 3 date-range picker (exact start/end days) |
 
-## Tech Stack
+Metrics: **total**, **monthly average** (divides by every month in the range, including ₹0 months), **highest month**, **lowest month**. The **current calendar month is omitted from lowest** so a partial month is not treated as cheapest.
 
-### Architecture & Libraries
-- **Language**: Kotlin 2.0.21
-- **UI Framework**: Jetpack Compose
-- **Material Design**: Material 3 (Material You)
-- **Database**: Room 2.6.1 with Kotlin Coroutines
-- **Navigation**: Navigation3 1.0.0 (Latest navigation library)
-- **State Management**: StateFlow and ViewModel
-- **Build System**: Gradle 8.13.1 with Kotlin DSL
-- **Encryption**: SQLCipher 4.5.4 (256-bit AES)
-- **Security**: Android Keystore + EncryptedSharedPreferences
-- **Serialization**: Gson 2.11.0 for JSON backup/restore
+### Settings
+- Dark / light theme  
+- Optional **biometric or device PIN** lock on launch  
+- JSON **export / import** (Storage Access Framework — no storage permission)  
+- Import **merge** or **replace**; backups v1–v3 (expenses → +budgets/exclusions → +categories)
 
-### Key Android Components
-- **Minimum SDK**: 24 (Android 7.0)
-- **Target SDK**: 36 (Android 15+)
-- **Kotlin Symbol Processing (KSP)**: For Room annotation processing
-- **16 KB Page Size**: Configured for Android 15+ compatibility
-- **ABI Splits**: Optimized APKs for each architecture
+---
 
-## Project Structure
+## Architecture
+
+MVVM with a single-activity Compose UI. Repositories expose **Kotlin Flow**; ViewModels combine them into `StateFlow` UI state. Hilt wires database, backup, and preferences.
+
+```mermaid
+flowchart LR
+  UI["Compose screens"] --> VM["ViewModels + StateFlow"]
+  VM --> Repo["Repositories"]
+  Repo --> Room["Room DAOs"]
+  Room --> SQL["SQLCipher AES-256"]
+  SQL --> KS["Keystore + Encrypted prefs"]
+  VM --> Backup["BackupManager JSON"]
+  Backup --> SAF["SAF file picker"]
+```
 
 ```
 app/src/main/java/com/example/expancemanager/
-├── data/
-│   ├── Expense.kt              # Room entity
-│   ├── ExpenseDao.kt           # Database access object
-│   ├── ExpenseDatabase.kt      # Encrypted Room database (SQLCipher)
-│   └── ExpenseRepository.kt    # Data repository
+├── data/          entities, DAOs, repositories, preferences
+├── di/            Hilt modules
+├── nav/           Navigation 3 routes
+├── ui/screen/     Home, expenses, reports, settings, budget, categories, lock
+├── ui/components/ shared Compose widgets
+├── ui/theme/      Material 3 theme
 ├── viewmodel/
-│   └── ExpenseViewModel.kt     # UI state management
-├── ui/
-│   ├── screen/
-│   │   ├── HomeScreen.kt       # Main expense list screen
-│   │   ├── AddEditExpenseScreen.kt  # Add/edit expense form
-│   │   ├── ExpenseDetailScreen.kt   # Expense details view
-│   │   └── SettingsScreen.kt   # Settings and backup screen
-│   └── theme/
-│       ├── Color.kt
-│       ├── Theme.kt
-│       └── Type.kt
-├── nav/
-│   └── Routes.kt               # Navigation routes
-├── util/
-│   ├── DateUtils.kt            # Date formatting utilities
-│   ├── ExpenseCategories.kt    # Category definitions
-│   ├── SecureKeyGenerator.kt   # Encryption key management
-│   └── BackupManager.kt        # Backup/restore operations
-└── MainActivity.kt             # App entry point
+├── util/          dates, insights, backup, biometrics, keys
+├── ExpenseManagerApplication.kt
+└── MainActivity.kt
 ```
+
+---
 
 ## Screens
 
-### 1. Home Screen
-- Month selector with previous/next navigation
-- Total expenses summary card
-- Category breakdown (top 5 categories)
-- List of all expenses for the selected month
-- Floating action button to add new expenses
-- Swipe to delete with confirmation dialog
+| Screen | What you do |
+| --- | --- |
+| Home | Month nav, budget/total, categories, recent expenses, add FAB |
+| Add / Edit | Form with category and date |
+| Detail | Full record, edit, delete |
+| All categories | Share of spend for the month |
+| Category expenses | Transactions in one category |
+| Spending insights | Period chips, optional calendar range, summary + categories |
+| Settings | Theme, lock, budget, insights, manage categories, backup |
+| Monthly budget | Amount, clear, exclusions |
+| Manage categories | Add, edit, reorder, delete |
+| Biometric lock | Shown when lock is enabled |
 
-### 2. Add/Edit Expense Screen
-- Title input field
-- Amount input (with currency prefix)
-- Category dropdown with emoji icons
-- Date picker
-- Optional description field
-- Save button (validates input)
+---
 
-### 3. Expense Detail Screen
-- Large category icon
-- Expense amount display
-- Detailed information card
-- Edit and delete actions in top bar
-- Delete confirmation dialog
+## Data model
 
-### 4. Settings Screen
-- Backup & Restore section
-- Export data to JSON file
-- Import data from backup file
-- Merge or replace existing data options
-- File validation and error handling
+Local Room database (version 7), encrypted. Indexes on `expenses.date` and `expenses.category`.
 
-## Expense Categories
+| Table | Role |
+| --- | --- |
+| `expenses` | `id`, `title`, `amount`, `category`, `description`, `date`, `createdAt` |
+| `monthly_budgets` | Expected amount per month + year |
+| `budget_excluded_categories` | Names omitted from budget used / remaining |
+| `categories` | User name, emoji, sort order |
 
-The app includes 16 pre-defined categories with emoji icons:
-- 🍔 Food & Dining
-- 🚗 Transportation
-- 🛍️ Shopping
-- 🎬 Entertainment
-- 💡 Bills & Utilities
-- 🏥 Healthcare
-- 📚 Education
-- ✈️ Travel
-- 🛒 Groceries
-- 💆 Personal Care
-- 🏠 Rent
-- 🛡️ Insurance
-- 📈 Investments
-- 💳 EMI (Equated Monthly Installment)
-- 🎁 Gifts
-- 💰 Other
+**Default categories:** Bills & Utilities 💡 · Transportation 🚗 · Food & Dining 🍔 · Personal Care 💆 · EMI 💳 · Baby 👶 · Groceries 🛒 · Investments 📈 · Travel ✈️ · Shopping 🛍️ · Entertainment 🎬 · Healthcare 🏥 · Education 📚 · Rent 🏠 · Insurance 🛡️ · Gifts 🎁 · Other 💰
 
-## Database Schema
+Backup JSON is versioned:
 
-### Expense Table
-```kotlin
-@Entity(tableName = "expenses")
-data class Expense(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val title: String,
-    val amount: Double,
-    val category: String,
-    val description: String = "",
-    val date: Long,              // Timestamp in milliseconds
-    val createdAt: Long = System.currentTimeMillis()
-)
+1. Expenses only  
+2. + monthly budgets and exclusions  
+3. + user categories  
+
+Older files still import; missing lists are treated as empty.
+
+---
+
+## Stack
+
+| | Version |
+| --- | --- |
+| Kotlin | 2.2.0 |
+| AGP | 8.13.1 |
+| Compose BOM | 2026.03.00 |
+| Room | 2.8.4 |
+| SQLCipher | 4.6.1 |
+| Navigation 3 | 1.1.5 |
+| Hilt | 2.57.1 |
+| Gson | 2.11.0 |
+| minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
+| JDK | 11 |
+
+Also: KSP, ktlint, R8 (release), ABI splits (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`), 16 KB page-size alignment for Android 15+.
+
+---
+
+## Build & run
+
+**Need:** Android Studio (current stable), JDK 11+, Android SDK 36.
+
+```bash
+./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
 ```
 
-## How to Build
+Open the project in Android Studio, sync Gradle, and run on a device or emulator (API 26+).
 
-1. **Prerequisites**:
-   - Android Studio (latest version recommended)
-   - JDK 11 or higher
-   - Android SDK 36
+---
 
-2. **Clone and Open**:
-   ```bash
-   # Project is already in: /Users/snagar/AndroidStudioProjects/ExpanceManager
-   # Open in Android Studio
-   ```
+## Security
 
-3. **Sync Gradle**:
-   - Android Studio will automatically sync Gradle files
-   - All dependencies will be downloaded
+1. On first launch, a random 256-bit passphrase is generated.  
+2. It is stored in EncryptedSharedPreferences, wrapped by the Android Keystore (hardware-backed when the device allows).  
+3. SQLCipher encrypts the database file; Room usage is unchanged.
 
-4. **Build and Run**:
-   - Click the "Run" button in Android Studio
-   - Select a device or emulator
-   - The app will build and install automatically
+There are **no hardcoded keys**. App updates keep the key; **uninstall does not**.
 
-## Features in Detail
+Optional **biometric lock** is a UI gate; it does not replace database encryption.
 
-### Month-wise Tracking
-- Navigate between months using arrow buttons
-- Automatically shows current month on first launch
-- Expenses are filtered by the selected month
-- Total and category breakdowns update automatically
+Full write-up: [ENCRYPTION.md](ENCRYPTION.md).
 
-### Data Persistence & Backup
-- All data is stored locally using Room database
-- Data persists across app restarts
-- No network connection required
-- Fast query performance with indexed date fields
-- **Export/Import**: Backup your data as JSON files
-- **Storage Access Framework**: No storage permissions needed
-- **Data Safety**: Keep backups in cloud storage or local files
+---
 
-### Reactive UI
-- UI automatically updates when data changes
-- Uses Kotlin Flow for reactive data streams
-- StateFlow for UI state management
-- No manual refresh needed
+## Further reading
 
-## Security & Encryption
+- [ENCRYPTION.md](ENCRYPTION.md) — key lifecycle, SQLCipher, uninstall implications  
+- [16KB_PAGE_SIZE.md](16KB_PAGE_SIZE.md) — Play 16 KB page-size requirements and ABI splits  
 
-### 🔐 Database Encryption with SQLCipher
+---
 
-All your financial data is protected with **bank-level AES-256 encryption**:
+## Roadmap
 
-- **Automatic Encryption**: Database is encrypted transparently
-- **Secure Key Management**: Uses Android Keystore for passphrase protection
-- **Hardware Security**: Leverages device security chip when available
-- **No Performance Impact**: Minimal overhead (~5-10%)
-- **Industry Standard**: SQLCipher is used by Signal, Facebook, and financial institutions
+Not in the app yet:
 
-### How It Works
+- Recurring expenses  
+- Search, tags, charts  
+- CSV / PDF export  
+- Multiple currencies  
+- Receipt photos  
+- Encrypted or scheduled backups  
+- Cloud sync  
 
-1. **First Launch**: App generates a secure 256-bit random passphrase
-2. **Key Storage**: Passphrase is encrypted and stored using Android's MasterKey
-3. **Transparent Access**: All database operations are automatically encrypted/decrypted
-4. **No User Action**: Works seamlessly in the background
+---
 
-### What's Protected
-
-✅ All expense records and amounts  
-✅ Category and description data  
-✅ Date information and timestamps  
-✅ Database structure and metadata  
-
-### Security Guarantees
-
-- 🔒 Data encrypted at rest (AES-256)
-- 🔑 No hardcoded keys in source code
-- 🛡️ Hardware-backed key storage
-- 📱 Survives app updates
-- 🏦 FIPS 140-2 compliant
-
-**Note**: Uninstalling the app will delete the encryption key, making the data unrecoverable by design. Use the **Backup & Restore** feature to export your data before uninstalling.
-
-For detailed security information, see [ENCRYPTION.md](ENCRYPTION.md)  
-For backup feature documentation, see [BACKUP_FEATURE.md](BACKUP_FEATURE.md)
-
-## Future Enhancement Ideas
-
-- Budget setting per category/month
-- Recurring expenses
-- CSV and PDF export
-- Charts and graphs
-- Multiple currency support
-- Search and filter functionality
-- Expense tags
-- Receipt photo attachment
-- Cloud backup and sync (automatic)
-- Financial reports and insights
-- Encrypted backup files
-- Scheduled automatic backups
-
-## License
-
-This is a personal project for expense tracking purposes.
-
-## Developer
-
-Built with ❤️ using Kotlin and Jetpack Compose
-
+Personal project. Kotlin + Jetpack Compose.

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt as PlatformBiometricPrompt
 import android.os.Build
 import android.os.CancellationSignal
@@ -13,54 +14,80 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.example.expancemanager.R
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.Executor
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BiometricAuthenticator @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext context: Context
 ) {
+    private val mainExecutor: Executor = ContextCompat.getMainExecutor(context)
+    private val keyguardManager: KeyguardManager? = context.getSystemService(KeyguardManager::class.java)
+    private val promptTitle: String = context.getString(R.string.biometric_prompt_title)
+    private val promptSubtitle: String = context.getString(R.string.biometric_prompt_subtitle)
+    private val unavailableMessage: String = context.getString(R.string.settings_biometric_unavailable)
+    private val canceledMessage: String = context.getString(R.string.biometric_auth_canceled)
+
     private var boundActivity: ComponentActivity? = null
     private var credentialLauncher: ActivityResultLauncher<Intent>? = null
-    private var pendingSuccess: (() -> Unit)? = null
-    private var pendingError: ((String) -> Unit)? = null
+    private var pendingCallbacks: AuthCallbacks? = null
+    private var activeCancellation: CancellationSignal? = null
 
-    fun bindActivity(activity: ComponentActivity) {
+    private data class AuthCallbacks(
+        val onSuccess: () -> Unit,
+        val onError: (String) -> Unit
+    )
+
+    internal fun bindActivity(activity: ComponentActivity) {
         if (boundActivity === activity) return
+        releaseActivityBinding()
         boundActivity = activity
         credentialLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                pendingSuccess?.invoke()
-            } else {
-                pendingError?.invoke(context.getString(R.string.biometric_auth_canceled))
+            val callbacks = pendingCallbacks
+            pendingCallbacks = null
+            when {
+                callbacks == null -> Unit
+                result.resultCode == Activity.RESULT_OK -> callbacks.onSuccess()
+                else -> callbacks.onError(canceledMessage)
             }
-            pendingSuccess = null
-            pendingError = null
         }
     }
 
-    fun canAuthenticate(): Boolean =
-        context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+    internal fun unbindActivity(activity: ComponentActivity) {
+        if (boundActivity !== activity) return
+        releaseActivityBinding()
+    }
 
-    fun authenticate(
+    internal fun canAuthenticate(): Boolean = keyguardManager?.isDeviceSecure == true
+
+    internal fun authenticate(
         activity: ComponentActivity,
-        title: String = context.getString(R.string.biometric_prompt_title),
-        subtitle: String = context.getString(R.string.biometric_prompt_subtitle),
+        title: String = promptTitle,
+        subtitle: String = promptSubtitle,
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
         onFailed: () -> Unit = {}
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            authenticateWithPlatformPrompt(activity, title, subtitle, onSuccess, onError, onFailed)
+            showPlatformPrompt(activity, title, subtitle, onSuccess, onError, onFailed)
         } else {
-            authenticateWithDeviceCredential(activity, title, subtitle, onSuccess, onError)
+            showDeviceCredential(title, subtitle, onSuccess, onError)
         }
     }
 
+    private fun releaseActivityBinding() {
+        activeCancellation?.cancel()
+        activeCancellation = null
+        pendingCallbacks = null
+        boundActivity = null
+        credentialLauncher = null
+    }
+
     @Suppress("NewApi")
-    private fun authenticateWithPlatformPrompt(
+    private fun showPlatformPrompt(
         activity: ComponentActivity,
         title: String,
         subtitle: String,
@@ -68,13 +95,17 @@ class BiometricAuthenticator @Inject constructor(
         onError: (String) -> Unit,
         onFailed: () -> Unit
     ) {
-        val executor = ContextCompat.getMainExecutor(activity)
+        activeCancellation?.cancel()
+        val cancellation = CancellationSignal().also { activeCancellation = it }
+
         val callback = object : PlatformBiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: PlatformBiometricPrompt.AuthenticationResult) {
+                clearActiveCancellation(cancellation)
                 onSuccess()
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                clearActiveCancellation(cancellation)
                 if (errorCode != PlatformBiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED &&
                     errorCode != PlatformBiometricPrompt.BIOMETRIC_ERROR_CANCELED
                 ) {
@@ -91,43 +122,46 @@ class BiometricAuthenticator @Inject constructor(
             .setTitle(title)
             .setSubtitle(subtitle)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            builder.setAllowedAuthenticators(allowedAuthenticators())
+            builder.setAllowedAuthenticators(AUTHENTICATORS)
         } else {
             @Suppress("DEPRECATION")
             builder.setDeviceCredentialAllowed(true)
         }
-
-        builder.build().authenticate(CancellationSignal(), executor, callback)
+        builder.build().authenticate(cancellation, mainExecutor, callback)
     }
 
-    private fun authenticateWithDeviceCredential(
-        activity: ComponentActivity,
+    private fun showDeviceCredential(
         title: String,
         subtitle: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val unavailable = context.getString(R.string.settings_biometric_unavailable)
-        val keyguardManager = activity.getSystemService(KeyguardManager::class.java)
-        if (keyguardManager == null || !keyguardManager.isDeviceSecure) {
-            onError(unavailable)
+        if (!canAuthenticate()) {
+            onError(unavailableMessage)
             return
         }
-        val intent = keyguardManager.createConfirmDeviceCredentialIntent(title, subtitle)
+        val intent = keyguardManager?.createConfirmDeviceCredentialIntent(title, subtitle)
             ?: run {
-                onError(unavailable)
+                onError(unavailableMessage)
                 return
             }
         val launcher = credentialLauncher ?: run {
-            onError(unavailable)
+            onError(unavailableMessage)
             return
         }
-        pendingSuccess = onSuccess
-        pendingError = onError
+        pendingCallbacks = AuthCallbacks(onSuccess, onError)
         launcher.launch(intent)
     }
 
-    private fun allowedAuthenticators(): Int =
-        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or
-            android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    private fun clearActiveCancellation(cancellation: CancellationSignal) {
+        if (activeCancellation === cancellation) {
+            activeCancellation = null
+        }
+    }
+
+    private companion object {
+        const val AUTHENTICATORS =
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    }
 }

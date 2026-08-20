@@ -1,6 +1,7 @@
 package com.example.expancemanager.ui.screen
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,12 +13,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,14 +36,40 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.expancemanager.R
 import com.example.expancemanager.util.BiometricAuthenticator
 
+/**
+ * Tracks in-flight system flows (document picker, credential screen, etc.) where [ON_STOP]
+ * must not trigger the biometric lock, otherwise activity-result callbacks are lost.
+ */
+internal interface BiometricLockHandle {
+    fun beginExternalFlow()
+    fun endExternalFlow()
+}
+
+internal val LocalBiometricLockHandle = compositionLocalOf<BiometricLockHandle> {
+    error("BiometricLockHandle not provided")
+}
+
 @Composable
-fun BiometricAppGate(
+internal fun BiometricAppGate(
     isBiometricLockEnabled: Boolean,
     activity: ComponentActivity,
     biometricAuthenticator: BiometricAuthenticator,
     content: @Composable () -> Unit
 ) {
     var isUnlocked by remember { mutableStateOf(false) }
+    var externalFlowCount by remember { mutableIntStateOf(0) }
+
+    val lockHandle = remember {
+        object : BiometricLockHandle {
+            override fun beginExternalFlow() {
+                externalFlowCount++
+            }
+
+            override fun endExternalFlow() {
+                externalFlowCount = (externalFlowCount - 1).coerceAtLeast(0)
+            }
+        }
+    }
 
     LaunchedEffect(isBiometricLockEnabled) {
         isUnlocked = !isBiometricLockEnabled
@@ -48,7 +78,10 @@ fun BiometricAppGate(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, isBiometricLockEnabled) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && isBiometricLockEnabled) {
+            if (event == Lifecycle.Event.ON_STOP &&
+                isBiometricLockEnabled &&
+                externalFlowCount == 0
+            ) {
                 isUnlocked = false
             }
         }
@@ -56,16 +89,17 @@ fun BiometricAppGate(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (!isBiometricLockEnabled || isUnlocked) {
-        content()
-    }
-
-    if (isBiometricLockEnabled && !isUnlocked) {
-        BiometricLockGate(
-            activity = activity,
-            biometricAuthenticator = biometricAuthenticator,
-            onAuthenticated = { isUnlocked = true }
-        )
+    CompositionLocalProvider(LocalBiometricLockHandle provides lockHandle) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            content()
+            if (isBiometricLockEnabled && !isUnlocked) {
+                BiometricLockGate(
+                    activity = activity,
+                    biometricAuthenticator = biometricAuthenticator,
+                    onAuthenticated = { isUnlocked = true }
+                )
+            }
+        }
     }
 }
 
@@ -78,11 +112,12 @@ private fun BiometricLockGate(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var authAttempt by remember { mutableIntStateOf(0) }
     val authFailedMessage = stringResource(R.string.biometric_auth_failed)
+    val currentOnAuthenticated by rememberUpdatedState(onAuthenticated)
 
     LaunchedEffect(authAttempt) {
         biometricAuthenticator.authenticate(
             activity = activity,
-            onSuccess = onAuthenticated,
+            onSuccess = { currentOnAuthenticated() },
             onError = { errorMessage = it },
             onFailed = { errorMessage = authFailedMessage }
         )
@@ -98,7 +133,7 @@ private fun BiometricLockGate(
 }
 
 @Composable
-fun BiometricLockScreen(
+private fun BiometricLockScreen(
     errorMessage: String? = null,
     onUnlockClick: () -> Unit
 ) {

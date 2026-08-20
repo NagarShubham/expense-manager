@@ -11,37 +11,42 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * (count, total) are wrapped in [distinctUntilChanged] so writes that don't change the
  * derived value (e.g. editing an expense's title) don't ripple downstream recompositions.
  */
-class ExpenseRepository(
+internal class ExpenseRepository(
     private val expenseDao: ExpenseDao
 ) {
-    fun getExpenseCount(): Flow<Int> = expenseDao.getExpenseCount().distinctUntilChanged()
+    internal fun getExpenseCount(): Flow<Int> = expenseDao.getExpenseCount().distinctUntilChanged()
 
-    fun getExpensesByDateRange(
+    internal fun getExpensesByDateRange(
         startDate: Long,
         endDate: Long
     ): Flow<List<Expense>> = expenseDao.getExpensesByDateRange(startDate, endDate)
 
-    suspend fun getExpenseById(id: Long): Expense? = expenseDao.getExpenseById(id)
+    internal suspend fun getExpenseById(id: Long): Expense? = expenseDao.getExpenseById(id)
 
-    suspend fun insertExpense(expense: Expense): Long = expenseDao.insertExpense(expense)
+    internal suspend fun insertExpense(expense: Expense): Long = expenseDao.insertExpense(expense)
 
-    suspend fun updateExpense(expense: Expense) = expenseDao.updateExpense(expense)
+    internal suspend fun updateExpense(expense: Expense) = expenseDao.updateExpense(expense)
 
-    suspend fun deleteExpense(expense: Expense) = expenseDao.deleteExpense(expense)
+    internal suspend fun deleteExpense(expense: Expense) = expenseDao.deleteExpense(expense)
 
-    fun getTotalAmountByDateRange(
+    internal fun getTotalAmountByDateRange(
         startDate: Long,
         endDate: Long
     ): Flow<Double?> = expenseDao.getTotalAmountByDateRange(startDate, endDate).distinctUntilChanged()
 
-    fun getCategoryTotalsByDateRange(
+    internal fun getCategoryTotalsByDateRange(
         startDate: Long,
         endDate: Long
     ): Flow<List<CategoryTotal>> = expenseDao.getCategoryTotalsByDateRange(startDate, endDate)
 
-    suspend fun getAllExpensesForExport(): List<Expense> = expenseDao.getAllExpensesForExport()
+    internal fun getMonthlyTotalsByDateRange(
+        startDate: Long,
+        endDate: Long
+    ): Flow<List<MonthlyTotal>> = expenseDao.getMonthlyTotalsByDateRange(startDate, endDate)
 
-    suspend fun insertExpenses(expenses: List<Expense>) = expenseDao.insertExpenses(expenses)
+    internal suspend fun getAllExpensesForExport(): List<Expense> = expenseDao.getAllExpensesForExport()
 
-    suspend fun deleteAllExpenses() = expenseDao.deleteAllExpenses()
+    internal suspend fun insertExpenses(expenses: List<Expense>) = expenseDao.insertExpenses(expenses)
+
+    internal suspend fun deleteAllExpenses() = expenseDao.deleteAllExpenses()
 }

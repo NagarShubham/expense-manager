@@ -8,7 +8,7 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface CategoryDao {
+internal interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY sortOrder ASC")
     fun getAllOrdered(): Flow<List<Category>>
 
@@ -29,9 +29,6 @@ interface CategoryDao {
 
     @Query("SELECT COUNT(*) FROM categories WHERE name = :name")
     suspend fun countByName(name: String): Int
-
-    @Query("SELECT COUNT(*) FROM categories")
-    suspend fun count(): Int
 
     @Query("SELECT MAX(sortOrder) FROM categories")
     suspend fun getMaxSortOrder(): Int?

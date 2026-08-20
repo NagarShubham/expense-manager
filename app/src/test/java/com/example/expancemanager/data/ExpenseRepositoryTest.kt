@@ -37,4 +37,17 @@ class ExpenseRepositoryTest {
         assertThat(insertedId).isEqualTo(42L)
         coVerify(exactly = 1) { expenseDao.insertExpense(expense) }
     }
+
+    @Test
+    fun getMonthlyTotalsByDateRange_delegatesToDao() = runTest {
+        val expected = listOf(MonthlyTotal(month = 2, year = 2024, total = 80.0))
+        every {
+            expenseDao.getMonthlyTotalsByDateRange(startDate = 10L, endDate = 20L)
+        } returns flowOf(expected)
+
+        repository.getMonthlyTotalsByDateRange(startDate = 10L, endDate = 20L).test {
+            assertThat(awaitItem()).isEqualTo(expected)
+            awaitComplete()
+        }
+    }
 }

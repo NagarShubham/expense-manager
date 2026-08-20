@@ -16,7 +16,7 @@ import androidx.room.Index
     primaryKeys = ["month", "year", "category"],
     indices = [Index(value = ["category"])]
 )
-data class BudgetExcludedCategory(
+internal data class BudgetExcludedCategory(
     val month: Int,
     val year: Int,
     val category: String

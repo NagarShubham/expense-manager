@@ -1,28 +1,33 @@
 package com.example.expancemanager.ui.screen
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.example.expancemanager.R
+import com.example.expancemanager.ui.components.AppBackTopBar
 import com.example.expancemanager.ui.components.EmptyStateMessage
 import com.example.expancemanager.ui.components.ExpenseItemCard
+import com.example.expancemanager.ui.components.PeriodSummaryHeader
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryExpensesScreen(
+internal fun CategoryExpensesScreen(
     category: String,
     month: Int,
     year: Int,
@@ -41,28 +46,19 @@ fun CategoryExpensesScreen(
     val categoryTotal = remember(categoryExpenses) {
         categoryExpenses.sumOf { it.amount }
     }
+    val formattedTotal = remember(categoryTotal) { DateUtils.formatAmount(categoryTotal) }
+    val monthLabel = remember(month, year) { DateUtils.formatMonthYear(month, year) }
+    val categoryEmoji = remember(category, uiState.categoryEmojiMap) {
+        ExpenseCategories.getCategoryEmoji(category, uiState.categoryEmojiMap)
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = category,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            AppBackTopBar(
+                title = category,
+                onNavigateBack = onNavigateBack,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     ) { paddingValues ->
@@ -71,58 +67,22 @@ fun CategoryExpensesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Category header with emoji and total
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = dimensionResource(R.dimen.spacing_default),
-                        vertical = dimensionResource(R.dimen.spacing_small)
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = dimensionResource(R.dimen.card_elevation_raised))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(dimensionResource(R.dimen.spacing_xlarge)),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = ExpenseCategories.getCategoryEmoji(category, uiState.categoryEmojiMap),
-                        fontSize = 48.sp
-                    )
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                    Text(
-                        text = DateUtils.formatMonthYear(month, year),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                    Text(
-                        text = DateUtils.formatAmount(categoryTotal),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        text = if (categoryExpenses.size == 1) {
-                            stringResource(R.string.category_transaction_count_singular, categoryExpenses.size)
-                        } else {
-                            stringResource(R.string.category_transaction_count_plural, categoryExpenses.size)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-            }
+            PeriodSummaryHeader(
+                monthLabel = monthLabel,
+                formattedAmount = formattedTotal,
+                countLabel = if (categoryExpenses.size == 1) {
+                    stringResource(R.string.category_transaction_count_singular, categoryExpenses.size)
+                } else {
+                    stringResource(R.string.category_transaction_count_plural, categoryExpenses.size)
+                },
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                emoji = categoryEmoji
+            )
 
-            // Expenses list
             if (categoryExpenses.isEmpty()) {
                 EmptyStateMessage(
-                    emoji = ExpenseCategories.getCategoryEmoji(category, uiState.categoryEmojiMap),
+                    emoji = categoryEmoji,
                     title = stringResource(R.string.category_empty_title),
                     subtitle = stringResource(R.string.category_empty_subtitle, category)
                 )

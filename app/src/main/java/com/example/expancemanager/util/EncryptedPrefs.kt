@@ -15,10 +15,10 @@ import java.util.concurrent.ConcurrentHashMap
  * Instances are cached per file name; [EncryptedSharedPreferences.create] is relatively
  * expensive and safe to reuse.
  */
-object EncryptedPrefs {
+internal object EncryptedPrefs {
     private val cache = ConcurrentHashMap<String, SharedPreferences>()
 
-    fun get(
+    internal fun get(
         context: Context,
         fileName: String
     ): SharedPreferences = cache.getOrPut(fileName) { create(context.applicationContext, fileName) }

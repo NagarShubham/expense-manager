@@ -22,6 +22,7 @@ import com.example.expancemanager.nav.EditExpenseRoute
 import com.example.expancemanager.nav.ExpenseDetailRoute
 import com.example.expancemanager.nav.HomeScreenRoute
 import com.example.expancemanager.nav.ManageCategoriesRoute
+import com.example.expancemanager.nav.ReportsRoute
 import com.example.expancemanager.nav.SettingsRoute
 import com.example.expancemanager.ui.screen.AddEditExpenseScreen
 import com.example.expancemanager.ui.screen.AllCategoriesScreen
@@ -31,8 +32,9 @@ import com.example.expancemanager.ui.screen.CategoryExpensesScreen
 import com.example.expancemanager.ui.screen.ExpenseDetailScreen
 import com.example.expancemanager.ui.screen.HomeScreen
 import com.example.expancemanager.ui.screen.ManageCategoriesScreen
+import com.example.expancemanager.ui.screen.ReportsScreen
 import com.example.expancemanager.ui.screen.SettingsScreen
-import com.example.expancemanager.ui.theme.ExpanceManagerTheme
+import com.example.expancemanager.ui.theme.ExpanseManagerTheme
 import com.example.expancemanager.util.BiometricAuthenticator
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,7 +58,7 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme by preferenceRepository.isDarkTheme.collectAsState()
             val isBiometricLockEnabled by preferenceRepository.isBiometricLockEnabled.collectAsState()
 
-            ExpanceManagerTheme(darkTheme = isDarkTheme) {
+            ExpanseManagerTheme(darkTheme = isDarkTheme) {
                 BiometricAppGate(
                     isBiometricLockEnabled = isBiometricLockEnabled,
                     activity = this@MainActivity,
@@ -66,6 +68,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        biometricAuthenticator.unbindActivity(this)
+        super.onDestroy()
     }
 
     @Composable
@@ -140,11 +147,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
+            entry<ReportsRoute> { ReportsScreen(onNavigateBack = viewModel::navigateBack) }
             entry<SettingsRoute> {
                 SettingsScreen(
                     onNavigateBack = viewModel::navigateBack,
                     onNavigateToBudgetSettings = { viewModel.navigateTo(BudgetSettingsRoute) },
-                    onNavigateToManageCategories = { viewModel.navigateTo(ManageCategoriesRoute) }
+                    onNavigateToManageCategories = { viewModel.navigateTo(ManageCategoriesRoute) },
+                    onNavigateToReports = { viewModel.navigateTo(ReportsRoute) }
                 )
             }
 

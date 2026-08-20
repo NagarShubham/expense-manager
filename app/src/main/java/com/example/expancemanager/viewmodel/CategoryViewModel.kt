@@ -15,15 +15,15 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class CategoryViewModel @Inject constructor(
+internal class CategoryViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository
 ) : ViewModel() {
-    val categories: StateFlow<List<Category>> =
+    internal val categories: StateFlow<List<Category>> =
         categoryRepository
             .getCategories()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    suspend fun addCategory(
+    internal suspend fun addCategory(
         name: String,
         emoji: String
     ): CategoryResult =
@@ -31,7 +31,7 @@ class CategoryViewModel @Inject constructor(
             categoryRepository.addCategory(name, emoji)
         }
 
-    suspend fun updateCategory(
+    internal suspend fun updateCategory(
         oldName: String,
         newName: String,
         emoji: String
@@ -40,13 +40,13 @@ class CategoryViewModel @Inject constructor(
             categoryRepository.updateCategory(oldName, newName, emoji)
         }
 
-    suspend fun deleteCategory(name: String): CategoryResult =
+    internal suspend fun deleteCategory(name: String): CategoryResult =
         withContext(Dispatchers.IO) {
             categoryRepository.deleteCategory(name)
         }
 
     /** Moves the category at [fromIndex] one position up or down and persists the new order. */
-    fun moveCategory(
+    internal fun moveCategory(
         fromIndex: Int,
         toIndex: Int
     ) {

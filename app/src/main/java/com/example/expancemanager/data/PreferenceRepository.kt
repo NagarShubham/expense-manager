@@ -24,18 +24,18 @@ class PreferenceRepository @Inject constructor(
             Configuration.UI_MODE_NIGHT_YES
 
     private val _isDarkTheme = MutableStateFlow(loadDarkTheme())
-    val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
+    internal val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
     private val _isBiometricLockEnabled = MutableStateFlow(loadBiometricLockEnabled())
-    val isBiometricLockEnabled: StateFlow<Boolean> = _isBiometricLockEnabled.asStateFlow()
+    internal val isBiometricLockEnabled: StateFlow<Boolean> = _isBiometricLockEnabled.asStateFlow()
 
-    fun setDarkTheme(enabled: Boolean) {
+    internal fun setDarkTheme(enabled: Boolean) {
         if (_isDarkTheme.value == enabled) return
         prefs.edit { putBoolean(KEY_DARK_THEME, enabled) }
         _isDarkTheme.value = enabled
     }
 
-    fun setBiometricLockEnabled(enabled: Boolean) {
+    internal fun setBiometricLockEnabled(enabled: Boolean) {
         if (_isBiometricLockEnabled.value == enabled) return
         prefs.edit { putBoolean(KEY_BIOMETRIC_LOCK, enabled) }
         _isBiometricLockEnabled.value = enabled

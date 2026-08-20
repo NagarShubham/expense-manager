@@ -60,7 +60,7 @@ private object HomeContentType {
 }
 
 @Composable
-fun HomeScreen(
+internal fun HomeScreen(
     viewModel: ExpenseViewModel,
     onAddExpenseClick: () -> Unit = {},
     onExpenseClick: (Long) -> Unit = {},
@@ -168,13 +168,13 @@ fun HomeScreen(
 }
 
 @Composable
-fun MonthSelector(
+private fun MonthSelector(
     month: Int,
     year: Int,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onMonthYearClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: (() -> Unit)? = null
 ) {
     val formattedMonthYear = remember(month, year) { DateUtils.formatMonthYear(month, year) }
     Row(
@@ -217,12 +217,14 @@ fun MonthSelector(
                 )
             }
 
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.cd_settings),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+            if (onSettingsClick != null) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.cd_settings),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -232,8 +234,8 @@ private data class BudgetDerived(
     val formattedTotal: String,
     val formattedExpected: String?,
     val formattedUsedForBudget: String,
-    val remaining: Double?,
-    val overspent: Double?,
+    val formattedRemaining: String?,
+    val formattedOverspent: String?,
     val isOverspent: Boolean,
     val progress: Float,
     val percentUsed: Int,
@@ -241,7 +243,7 @@ private data class BudgetDerived(
 )
 
 @Composable
-fun BudgetSummaryCard(
+private fun BudgetSummaryCard(
     totalAmount: Double,
     totalAmountForBudget: Double = totalAmount,
     expectedAmount: Double?,
@@ -261,11 +263,11 @@ fun BudgetSummaryCard(
             0
         }
         BudgetDerived(
-            formattedTotal = DateUtils.formatAmount(totalAmount),
-            formattedExpected = exp?.let { DateUtils.formatAmount(it) },
-            formattedUsedForBudget = DateUtils.formatAmount(totalAmountForBudget),
-            remaining = remaining,
-            overspent = overspent,
+            formattedTotal = DateUtils.formatAmount(totalAmount, hideZeroDecimals = true),
+            formattedExpected = exp?.let { DateUtils.formatAmount(it, hideZeroDecimals = true) },
+            formattedUsedForBudget = DateUtils.formatAmount(totalAmountForBudget, hideZeroDecimals = true),
+            formattedRemaining = remaining?.let { DateUtils.formatAmount(it, hideZeroDecimals = true) },
+            formattedOverspent = overspent?.let { DateUtils.formatAmount(it, hideZeroDecimals = true) },
             isOverspent = isOverspent,
             progress = progress,
             percentUsed = percentUsed,
@@ -348,8 +350,8 @@ fun BudgetSummaryCard(
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
                 Text(
                     text = when {
-                        derived.isOverspent && derived.overspent != null -> stringResource(R.string.budget_summary_over, DateUtils.formatAmount(derived.overspent))
-                        derived.remaining != null -> stringResource(R.string.budget_summary_left, DateUtils.formatAmount(derived.remaining), derived.formattedExpected ?: "")
+                        derived.isOverspent && derived.formattedOverspent != null -> stringResource(R.string.budget_summary_over, derived.formattedOverspent)
+                        derived.formattedRemaining != null -> stringResource(R.string.budget_summary_left, derived.formattedRemaining, derived.formattedExpected ?: "")
                         else -> ""
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -384,7 +386,7 @@ fun BudgetSummaryCard(
 }
 
 @Composable
-fun CategoryBreakdown(
+private fun CategoryBreakdown(
     categoryTotals: List<CategoryTotal>,
     month: Int,
     year: Int,
@@ -392,7 +394,7 @@ fun CategoryBreakdown(
     onCategoryClick: (String, Int, Int) -> Unit,
     onShowAllClick: (Int, Int) -> Unit = { _, _ -> }
 ) {
-    val displayedCategories = categoryTotals.take(5)
+    val displayedCategories = remember(categoryTotals) { categoryTotals.take(5) }
     val hasMoreCategories = categoryTotals.size > 5
 
     Card(
@@ -437,7 +439,7 @@ private fun CategoryItem(
         ExpenseCategories.getCategoryEmoji(categoryTotal.category, emojiMap)
     }
     val formattedAmount = remember(categoryTotal.total) {
-        DateUtils.formatAmount(categoryTotal.total)
+        DateUtils.formatAmount(categoryTotal.total, hideZeroDecimals = true)
     }
 
     Row(

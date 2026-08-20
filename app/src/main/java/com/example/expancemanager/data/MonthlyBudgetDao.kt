@@ -7,7 +7,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface MonthlyBudgetDao {
+internal interface MonthlyBudgetDao {
     @Query("SELECT * FROM monthly_budgets WHERE month = :month AND year = :year LIMIT 1")
     fun getBudgetByMonthYear(
         month: Int,

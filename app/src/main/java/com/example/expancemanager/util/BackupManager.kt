@@ -8,7 +8,6 @@ import com.example.expancemanager.data.Expense
 import com.example.expancemanager.data.MonthlyBudget
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStreamReader
@@ -25,7 +24,7 @@ import javax.inject.Inject
  * budget exclusions; version 3 adds user-managed [Category] rows. Missing fields are
  * treated as empty lists on import, so older backups still restore.
  */
-class BackupManager @Inject constructor(private val contentResolver: ContentResolver) {
+internal class BackupManager @Inject constructor(private val contentResolver: ContentResolver) {
     private val gson: Gson = GsonBuilder()
         .setPrettyPrinting()
         .create()
@@ -54,7 +53,7 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
     /**
      * Exports expenses, monthly budgets, and budget exclusions to a JSON file.
      */
-    suspend fun exportToJson(
+    internal suspend fun exportToJson(
         uri: Uri,
         expenses: List<Expense>,
         monthlyBudgets: List<MonthlyBudget>,
@@ -88,7 +87,7 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
     /**
      * Imports a backup file. Supports v1 (expenses only) and v2 (expenses + budgets + exclusions).
      */
-    suspend fun importFromJson(uri: Uri): Result<BackupImportResult> =
+    internal suspend fun importFromJson(uri: Uri): Result<BackupImportResult> =
         withContext(Dispatchers.IO) {
             try {
                 when (val outcome = loadBackup(uri, ioFailureMessage = "Unable to open input stream")) {
@@ -111,7 +110,7 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
      * Generates a default filename for backup.
      * Format: expense_backup_YYYYMMDD_HHMMSS.json
      */
-    fun generateBackupFileName(): String =
+    internal fun generateBackupFileName(): String =
         "expense_backup_${BACKUP_FILE_TIMESTAMP.format(LocalDateTime.now())}.json"
 
     private sealed interface LoadOutcome {
@@ -148,8 +147,7 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
             val backupData =
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     InputStreamReader(inputStream, Charsets.UTF_8).use { reader ->
-                        @Suppress("UNCHECKED_CAST")
-                        gson.fromJson(reader, BACKUP_DATA_TYPE) as BackupData?
+                        gson.fromJson(reader, BackupData::class.java)
                     }
                 } ?: return LoadOutcome.IoFailure(ioFailureMessage)
 
@@ -185,8 +183,6 @@ class BackupManager @Inject constructor(private val contentResolver: ContentReso
 
     companion object {
         const val CURRENT_VERSION = 3
-
-        private val BACKUP_DATA_TYPE = object : TypeToken<BackupData>() {}.type
 
         private val BACKUP_FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
     }

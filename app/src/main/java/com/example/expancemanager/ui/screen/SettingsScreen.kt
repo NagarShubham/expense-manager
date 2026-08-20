@@ -3,10 +3,8 @@ package com.example.expancemanager.ui.screen
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -28,24 +24,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,36 +41,40 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expancemanager.R
+import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.SettingsActionRow
+import com.example.expancemanager.ui.components.SettingsGroupCard
+import com.example.expancemanager.ui.components.SettingsNavigationRow
+import com.example.expancemanager.ui.components.SettingsSection
+import com.example.expancemanager.ui.components.SettingsSwitchRow
 import com.example.expancemanager.util.showToast
 import com.example.expancemanager.viewmodel.SettingViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
+internal fun SettingsScreen(
     viewModel: SettingViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToBudgetSettings: () -> Unit = {},
-    onNavigateToManageCategories: () -> Unit = {}
+    onNavigateToManageCategories: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val expenseCount by viewModel.expenseCount.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val isBiometricLockEnabled by viewModel.isBiometricLockEnabled.collectAsState()
-    val activity = LocalContext.current as? ComponentActivity
+    val activity = context as? ComponentActivity
+    val biometricLockHandle = LocalBiometricLockHandle.current
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -97,18 +87,22 @@ fun SettingsScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        uri?.let {
-            scope.launch {
-                isLoading = true
-                val result = viewModel.exportData(it)
-                isLoading = false
+        try {
+            uri?.let {
+                scope.launch {
+                    isLoading = true
+                    val result = viewModel.exportData(it)
+                    isLoading = false
 
-                if (result.isSuccess) {
-                    context.showToast(result.getOrNull() ?: context.getString(R.string.settings_export_success_default))
-                } else {
-                    context.showToast(context.getString(R.string.settings_export_failed, result.exceptionOrNull()?.message.orEmpty()))
+                    if (result.isSuccess) {
+                        context.showToast(result.getOrNull() ?: context.getString(R.string.settings_export_success_default))
+                    } else {
+                        context.showToast(context.getString(R.string.settings_export_failed, result.exceptionOrNull()?.message.orEmpty()))
+                    }
                 }
             }
+        } finally {
+            biometricLockHandle.endExternalFlow()
         }
     }
 
@@ -116,34 +110,23 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
-        uri?.let {
-            pendingImportUri = it
-            showImportConfirmDialog = true
+        try {
+            uri?.let {
+                pendingImportUri = it
+                showImportConfirmDialog = true
+            }
+        } finally {
+            biometricLockHandle.endExternalFlow()
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+            AppBackTopBar(
+                title = stringResource(R.string.settings_title),
+                onNavigateBack = onNavigateBack,
+                backContentDescription = stringResource(R.string.cd_navigate_back),
+                titleFontWeight = FontWeight.SemiBold
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -242,9 +225,29 @@ fun SettingsScreen(
                     }
                 }
 
+                SettingsSection(title = stringResource(R.string.settings_insights_section)) {
+                    SettingsGroupCard {
+                        SettingsNavigationRow(
+                            iconEmoji = stringResource(R.string.home_empty_emoji),
+                            iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            title = stringResource(R.string.settings_reports_title),
+                            subtitle = stringResource(R.string.settings_reports_subtitle),
+                            onClick = onNavigateToReports,
+                            showDivider = false
+                        )
+                    }
+                }
+
                 SettingsSection(title = stringResource(R.string.settings_categories_section)) {
                     SettingsGroupCard {
-                        SettingsCategoriesRow(onClick = onNavigateToManageCategories)
+                        SettingsNavigationRow(
+                            iconEmoji = "🏷️",
+                            iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            title = stringResource(R.string.settings_categories_title),
+                            subtitle = stringResource(R.string.settings_categories_subtitle),
+                            onClick = onNavigateToManageCategories,
+                            showDivider = false
+                        )
                     }
                 }
 
@@ -285,6 +288,7 @@ fun SettingsScreen(
             onDismiss = { showExportDialog = false },
             onConfirm = {
                 showExportDialog = false
+                biometricLockHandle.beginExternalFlow()
                 exportLauncher.launch(viewModel.generateBackupFileName())
             }
         )
@@ -295,6 +299,7 @@ fun SettingsScreen(
             onDismiss = { showImportDialog = false },
             onSelectFile = {
                 showImportDialog = false
+                biometricLockHandle.beginExternalFlow()
                 importLauncher.launch(arrayOf("application/json", "application/*", "*/*"))
             }
         )
@@ -425,281 +430,6 @@ private fun SettingsTipBanner() {
             )
         }
     }
-}
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(
-                start = dimensionResource(R.dimen.spacing_tiny),
-                bottom = dimensionResource(R.dimen.spacing_small)
-            )
-        )
-        content()
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
-    }
-}
-
-@Composable
-private fun SettingsGroupCard(content: @Composable ColumnScope.() -> Unit) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-        )
-    ) {
-        Column(content = content)
-    }
-}
-
-@Composable
-private fun SettingsIconContainer(
-    iconEmoji: String? = null,
-    iconResId: Int? = null,
-    containerColor: Color,
-    tint: Color = Color.Unspecified
-) {
-    Surface(
-        modifier = Modifier.size(40.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = containerColor
-    ) {
-        when {
-            iconEmoji != null -> Text(
-                text = iconEmoji,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(8.dp)
-            )
-
-            iconResId != null -> Icon(
-                painter = painterResource(iconResId),
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsInsetDivider(show: Boolean) {
-    if (show) {
-        HorizontalDivider(
-            modifier = Modifier.padding(start = 72.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
-    }
-}
-
-@Composable
-private fun SettingsSwitchRow(
-    iconEmoji: String,
-    iconContainerColor: Color,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-    showDivider: Boolean
-) {
-    SettingsInsetDivider(showDivider)
-    ListItem(
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        supportingContent = {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = {
-            SettingsIconContainer(
-                iconEmoji = iconEmoji,
-                containerColor = iconContainerColor
-            )
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun SettingsNavigationRow(
-    iconResId: Int,
-    iconContainerColor: Color,
-    iconTint: Color,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    showDivider: Boolean
-) {
-    SettingsInsetDivider(showDivider)
-    ListItem(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        supportingContent = {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = {
-            SettingsIconContainer(
-                iconResId = iconResId,
-                containerColor = iconContainerColor,
-                tint = iconTint
-            )
-        },
-        trailingContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun SettingsCategoriesRow(onClick: () -> Unit) {
-    ListItem(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        headlineContent = {
-            Text(
-                text = stringResource(R.string.settings_categories_title),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        supportingContent = {
-            Text(
-                text = stringResource(R.string.settings_categories_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = {
-            SettingsIconContainer(
-                iconEmoji = "🏷️",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer
-            )
-        },
-        trailingContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun SettingsActionRow(
-    iconResId: Int,
-    iconContainerColor: Color,
-    iconTint: Color,
-    title: String,
-    subtitle: String,
-    buttonText: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    tonal: Boolean,
-    showDivider: Boolean
-) {
-    SettingsInsetDivider(showDivider)
-    ListItem(
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        supportingContent = {
-            Column {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                if (tonal) {
-                    FilledTonalButton(
-                        onClick = onClick,
-                        enabled = enabled,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(buttonText)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = onClick,
-                        enabled = enabled,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(buttonText)
-                    }
-                }
-            }
-        },
-        leadingContent = {
-            SettingsIconContainer(
-                iconResId = iconResId,
-                containerColor = iconContainerColor,
-                tint = iconTint
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
 }
 
 @Composable

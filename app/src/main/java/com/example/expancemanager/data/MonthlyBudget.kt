@@ -10,7 +10,7 @@ import androidx.room.Entity
     tableName = "monthly_budgets",
     primaryKeys = ["month", "year"]
 )
-data class MonthlyBudget(
+internal data class MonthlyBudget(
     val month: Int,
     val year: Int,
     val expectedAmount: Double

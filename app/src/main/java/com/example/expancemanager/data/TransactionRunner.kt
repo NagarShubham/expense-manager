@@ -6,6 +6,6 @@ package com.example.expancemanager.data
  * data/domain classes decoupled from Room's `withTransaction` and makes them
  * unit-testable (tests supply a runner that executes the block inline).
  */
-fun interface TransactionRunner {
+internal fun interface TransactionRunner {
     suspend operator fun invoke(block: suspend () -> Unit)
 }

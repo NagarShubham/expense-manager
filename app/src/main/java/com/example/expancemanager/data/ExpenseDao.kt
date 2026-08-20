@@ -9,10 +9,7 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ExpenseDao {
-    @Query("SELECT * FROM expenses")
-    fun getAllExpenses(): Flow<List<Expense>>
-
+internal interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expenses")
     fun getExpenseCount(): Flow<Int>
 
@@ -46,6 +43,25 @@ interface ExpenseDao {
         endDate: Long
     ): Flow<List<CategoryTotal>>
 
+    /**
+     * Per-month sums for [startDate]..[endDate]. [MonthlyTotal.month] is 0-based (Calendar).
+     */
+    @Query(
+        """
+        SELECT CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) - 1 AS month,
+               CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
+               SUM(amount) AS total
+        FROM expenses
+        WHERE date >= :startDate AND date <= :endDate
+        GROUP BY year, month
+        ORDER BY year ASC, month ASC
+        """
+    )
+    fun getMonthlyTotalsByDateRange(
+        startDate: Long,
+        endDate: Long
+    ): Flow<List<MonthlyTotal>>
+
     @Query("SELECT COUNT(*) FROM expenses WHERE category = :name")
     suspend fun countExpensesInCategory(name: String): Int
 
@@ -64,8 +80,3 @@ interface ExpenseDao {
     @Query("DELETE FROM expenses")
     suspend fun deleteAllExpenses()
 }
-
-data class CategoryTotal(
-    val category: String,
-    val total: Double
-)
