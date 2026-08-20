@@ -5,59 +5,68 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.example.expancemanager.R
 import com.example.expancemanager.data.CategoryTotal
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.components.CategorySnapshotCard
+import com.example.expancemanager.ui.components.CircleIconButton
+import com.example.expancemanager.ui.components.EmptyStateAction
 import com.example.expancemanager.ui.components.EmptyStateMessage
 import com.example.expancemanager.ui.components.ExpenseItemCard
+import com.example.expancemanager.ui.components.HSpace
+import com.example.expancemanager.ui.components.HeroAmountText
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.SectionHeader
+import com.example.expancemanager.ui.components.ShareBar
+import com.example.expancemanager.ui.components.StatPill
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.DateUtils
-import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 
 /**
  * Constants for LazyColumn content types to optimize scrolling performance
  */
 private object HomeContentType {
+    const val MONTH_BAR = "month_bar"
+    const val HERO = "hero"
     const val CATEGORY_BREAKDOWN = "category_breakdown"
     const val HEADER = "header"
     const val EXPENSE_ITEM = "expense_item"
+    const val CATEGORY_CARD = "category_card"
 }
+
+/** Categories shown inline on Home before the list defers to the All Categories screen. */
+private const val HOME_CATEGORY_LIMIT = 5
+private const val HOME_CATEGORY_CARD_WIDTH_FRACTION = 0.42f
 
 @Composable
 internal fun HomeScreen(
@@ -71,96 +80,105 @@ internal fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = onAddExpenseClick,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_expense))
-            }
+                expanded = false,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.home_empty_action)) }
+            )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Month selector with settings
-            MonthSelector(
-                month = uiState.selectedMonth,
-                year = uiState.selectedYear,
-                onPreviousMonth = { viewModel.changeMonth(-1) },
-                onNextMonth = { viewModel.changeMonth(1) },
-                onMonthYearClick = { viewModel.goToCurrentMonth() },
-                onSettingsClick = onSettingsClick
+                .padding(paddingValues),
+            contentPadding = PaddingValues(
+                start = AppSpacing.screen,
+                end = AppSpacing.screen,
+                bottom = 96.dp
             )
+        ) {
+            item(key = "month_bar", contentType = HomeContentType.MONTH_BAR) {
+                MonthSelector(
+                    month = uiState.selectedMonth,
+                    year = uiState.selectedYear,
+                    onPreviousMonth = { viewModel.changeMonth(-1) },
+                    onNextMonth = { viewModel.changeMonth(1) },
+                    onMonthYearClick = { viewModel.goToCurrentMonth() },
+                    onSettingsClick = onSettingsClick
+                )
+            }
 
-            // Summary card with optional expected budget (budget comparison uses totalAmountForBudget = total minus excluded categories)
-            if (uiState.expenses.isNotEmpty()) {
-                BudgetSummaryCard(
+            // Budget comparison uses totalAmountForBudget (total minus excluded categories).
+            item(key = "hero", contentType = HomeContentType.HERO) {
+                BudgetHeroCard(
                     totalAmount = uiState.totalAmount,
                     totalAmountForBudget = uiState.totalAmountForBudget,
                     expectedAmount = uiState.expectedMonthlyAmount,
-                    excludedCategoryNames = uiState.excludedCategoryNames,
+                    transactionCount = uiState.expenses.size,
+                    excludedCategoryNames = uiState.excludedCategoryNames
                 )
+                VSpace(AppSpacing.small)
             }
 
-            // Expenses list
             if (uiState.expenses.isEmpty()) {
-                EmptyStateMessage(
-                    emoji = stringResource(R.string.home_empty_emoji),
-                    title = stringResource(R.string.home_empty_title),
-                    subtitle = stringResource(R.string.home_empty_subtitle)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = dimensionResource(R.dimen.spacing_default)),
-                    contentPadding = PaddingValues(vertical = dimensionResource(R.dimen.spacing_small))
-                ) {
-                    if (uiState.categoryTotals.isNotEmpty()) {
-                        item(
-                            key = "category_breakdown",
-                            contentType = HomeContentType.CATEGORY_BREAKDOWN
-                        ) {
-                            CategoryBreakdown(
-                                categoryTotals = uiState.categoryTotals,
-                                month = uiState.selectedMonth,
-                                year = uiState.selectedYear,
-                                emojiMap = uiState.categoryEmojiMap,
-                                onCategoryClick = onCategoryClick,
-                                onShowAllClick = onShowAllCategoriesClick
+                item(key = "empty") {
+                    VSpace(AppSpacing.xxlarge)
+                    EmptyStateMessage(
+                        emoji = stringResource(R.string.home_empty_emoji),
+                        title = stringResource(R.string.home_empty_title),
+                        subtitle = stringResource(R.string.home_empty_subtitle),
+                        modifier = Modifier.fillMaxWidth(),
+                        action = {
+                            EmptyStateAction(
+                                text = stringResource(R.string.home_empty_action),
+                                onClick = onAddExpenseClick
                             )
                         }
-                    }
-
+                    )
+                }
+            } else {
+                if (uiState.categoryTotals.isNotEmpty()) {
                     item(
-                        key = "recent_transactions_header",
-                        contentType = HomeContentType.HEADER
+                        key = "category_breakdown",
+                        contentType = HomeContentType.CATEGORY_BREAKDOWN
                     ) {
-                        Text(
-                            text = stringResource(R.string.home_recent_transactions),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = dimensionResource(R.dimen.spacing_small))
-                        )
-                    }
-
-                    items(
-                        items = uiState.expenses,
-                        key = { it.id },
-                        contentType = { HomeContentType.EXPENSE_ITEM }
-                    ) { expense ->
-                        ExpenseItemCard(
-                            expense = expense,
-                            onExpenseClick = { onExpenseClick(expense.id) },
-                            onDeleteExpense = { viewModel.deleteExpense(expense) },
+                        CategoryBreakdown(
+                            categoryTotals = uiState.categoryTotals,
+                            month = uiState.selectedMonth,
+                            year = uiState.selectedYear,
                             emojiMap = uiState.categoryEmojiMap,
-                            showCategory = true,
-                            showDescription = false
+                            onCategoryClick = onCategoryClick,
+                            onShowAllClick = onShowAllCategoriesClick
                         )
                     }
+                }
+
+                item(
+                    key = "recent_transactions_header",
+                    contentType = HomeContentType.HEADER
+                ) {
+                    VSpace(AppSpacing.small)
+                    SectionHeader(title = stringResource(R.string.home_recent_transactions))
+                }
+
+                items(
+                    items = uiState.expenses,
+                    key = { it.id },
+                    contentType = { HomeContentType.EXPENSE_ITEM }
+                ) { expense ->
+                    ExpenseItemCard(
+                        expense = expense,
+                        onExpenseClick = { onExpenseClick(expense.id) },
+                        onDeleteExpense = { viewModel.deleteExpense(expense) },
+                        emojiMap = uiState.categoryEmojiMap,
+                        showCategory = true,
+                        showDescription = false
+                    )
                 }
             }
         }
@@ -180,49 +198,70 @@ private fun MonthSelector(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(
-                horizontal = dimensionResource(R.dimen.spacing_default),
-                vertical = dimensionResource(R.dimen.spacing_small)
-            ),
+            .padding(top = AppSpacing.medium, bottom = AppSpacing.default),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPreviousMonth) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.cd_previous_month),
-                tint = MaterialTheme.colorScheme.primary
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = stringResource(R.string.cd_go_to_current_month),
+                    onClick = onMonthYearClick
+                )
+        ) {
+            // Wordmark above the month, so the header reads as an app bar without
+            // needing an actual TopAppBar on the home screen.
+            OverlineText(
+                text = stringResource(R.string.app_name),
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = formattedMonthYear,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        Text(
-            text = formattedMonthYear,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clickable(
-                role = Role.Button,
-                onClickLabel = stringResource(R.string.cd_go_to_current_month),
-                onClick = onMonthYearClick
-            )
-        )
-
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
         ) {
-            IconButton(onClick = onNextMonth) {
+            CircleIconButton(
+                onClick = onPreviousMonth,
+                contentDescription = stringResource(R.string.cd_previous_month)
+            ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.cd_next_month),
-                    tint = MaterialTheme.colorScheme.primary
+                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.cd_previous_month),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-
+            CircleIconButton(
+                onClick = onNextMonth,
+                contentDescription = stringResource(R.string.cd_next_month)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.cd_next_month),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             if (onSettingsClick != null) {
-                IconButton(onClick = onSettingsClick) {
+                CircleIconButton(
+                    onClick = onSettingsClick,
+                    contentDescription = stringResource(R.string.cd_settings)
+                ) {
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.cd_settings),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -242,12 +281,18 @@ private data class BudgetDerived(
     val percentOver: Int
 )
 
+/**
+ * The screen's hero: total spent for the month on the brand gradient, with budget
+ * progress folded in when a budget exists. Everything the card shows is also spelled
+ * out in text, so the bar is reinforcement rather than the only signal.
+ */
 @Composable
-private fun BudgetSummaryCard(
+private fun BudgetHeroCard(
     totalAmount: Double,
-    totalAmountForBudget: Double = totalAmount,
+    totalAmountForBudget: Double,
     expectedAmount: Double?,
-    excludedCategoryNames: Set<String> = emptySet(),
+    transactionCount: Int,
+    excludedCategoryNames: Set<String> = emptySet()
 ) {
     val derived = remember(totalAmount, totalAmountForBudget, expectedAmount) {
         val exp = expectedAmount
@@ -274,112 +319,118 @@ private fun BudgetSummaryCard(
             percentOver = percentOver
         )
     }
+    val appColors = MaterialTheme.appColors
+    val onHero = appColors.onHero
+    val onHeroMuted = appColors.onHeroMuted
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = dimensionResource(R.dimen.spacing_default),
-                vertical = dimensionResource(R.dimen.spacing_small)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = dimensionResource(R.dimen.card_elevation_raised))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_default)),
-            horizontalAlignment = if (expectedAmount == null) Alignment.CenterHorizontally else Alignment.Start
+    HeroGradientCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
         ) {
-            if (expectedAmount == null) {
-                Text(
-                    text = stringResource(R.string.home_total_expenses),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+            Column(modifier = Modifier.weight(1f)) {
+                OverlineText(
+                    text = stringResource(R.string.home_total_spent),
+                    color = onHeroMuted
                 )
-                Text(
+                VSpace(AppSpacing.small)
+                HeroAmountText(
                     text = derived.formattedTotal,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    style = MaterialTheme.typography.displaySmall,
+                    color = onHero
                 )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.home_total_expenses),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            text = derived.formattedTotal,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(dimensionResource(R.dimen.spacing_small)),
-                        color = if (derived.isOverspent) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary
-                    ) {
-                        Text(
-                            text = if (derived.isOverspent) {
-                                stringResource(R.string.budget_percent_over, derived.percentOver)
-                            } else {
-                                stringResource(R.string.budget_percent_used, derived.percentUsed)
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (derived.isOverspent) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(
-                                horizontal = dimensionResource(R.dimen.spacing_small),
-                                vertical = dimensionResource(R.dimen.spacing_tiny)
-                            )
-                        )
-                    }
-                }
             }
-
             if (expectedAmount != null) {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
+                HSpace(AppSpacing.small)
+                StatPill(
+                    text = if (derived.isOverspent) {
+                        stringResource(R.string.budget_percent_over, derived.percentOver)
+                    } else {
+                        stringResource(R.string.budget_percent_used, derived.percentUsed)
+                    },
+                    // On the gradient, over-budget needs its own alarm color; on-budget
+                    // stays a translucent wash so it reads as a quiet status chip.
+                    containerColor = if (derived.isOverspent) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        onHero.copy(alpha = 0.2f)
+                    },
+                    contentColor = if (derived.isOverspent) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        onHero
+                    }
+                )
+            }
+        }
+
+        if (expectedAmount == null) {
+            VSpace(AppSpacing.medium)
+            Text(
+                text = if (transactionCount == 1) {
+                    stringResource(R.string.home_transactions_count_singular)
+                } else {
+                    stringResource(R.string.home_transactions_count, transactionCount)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = onHeroMuted
+            )
+        } else {
+            VSpace(AppSpacing.large)
+            ShareBar(
+                progress = derived.progress,
+                color = onHero,
+                trackColor = onHero.copy(alpha = 0.24f),
+                height = 8.dp
+            )
+            VSpace(AppSpacing.medium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = when {
-                        derived.isOverspent && derived.formattedOverspent != null -> stringResource(R.string.budget_summary_over, derived.formattedOverspent)
-                        derived.formattedRemaining != null -> stringResource(R.string.budget_summary_left, derived.formattedRemaining, derived.formattedExpected ?: "")
+                        derived.isOverspent && derived.formattedOverspent != null ->
+                            stringResource(R.string.budget_summary_over, derived.formattedOverspent)
+
+                        derived.formattedRemaining != null ->
+                            stringResource(
+                                R.string.budget_summary_left,
+                                derived.formattedRemaining,
+                                derived.formattedExpected.orEmpty()
+                            )
+
                         else -> ""
                     },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (derived.isOverspent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onHero,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                LinearProgressIndicator(
-                    progress = { derived.progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(dimensionResource(R.dimen.spacing_small)),
-                    color = if (derived.isOverspent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-                )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_tiny)))
+                HSpace(AppSpacing.small)
                 Text(
-                    text = stringResource(R.string.budget_summary_used_of, derived.formattedUsedForBudget, derived.formattedExpected ?: ""),
+                    text = stringResource(
+                        R.string.budget_summary_used_of,
+                        derived.formattedUsedForBudget,
+                        derived.formattedExpected.orEmpty()
+                    ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = onHeroMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (excludedCategoryNames.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.budget_categories_excluded_hint, excludedCategoryNames.size),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                    )
-                }
+            }
+            if (excludedCategoryNames.isNotEmpty()) {
+                VSpace(AppSpacing.tiny)
+                Text(
+                    text = stringResource(
+                        R.string.budget_categories_excluded_hint,
+                        excludedCategoryNames.size
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = onHeroMuted
+                )
             }
         }
     }
@@ -394,116 +445,48 @@ private fun CategoryBreakdown(
     onCategoryClick: (String, Int, Int) -> Unit,
     onShowAllClick: (Int, Int) -> Unit = { _, _ -> }
 ) {
-    val displayedCategories = remember(categoryTotals) { categoryTotals.take(5) }
-    val hasMoreCategories = categoryTotals.size > 5
+    val strip = remember(categoryTotals) {
+        CategoryStrip(
+            items = categoryTotals.take(HOME_CATEGORY_LIMIT),
+            largestTotal = categoryTotals.maxOfOrNull { it.total } ?: 0.0,
+            showViewAll = categoryTotals.size > HOME_CATEGORY_LIMIT
+        )
+    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = dimensionResource(R.dimen.spacing_small))
-    ) {
-        Column(modifier = Modifier.padding(dimensionResource(R.dimen.spacing_default))) {
-            Text(
-                text = stringResource(R.string.home_category_breakdown),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = dimensionResource(R.dimen.spacing_medium))
-            )
-
-            displayedCategories.forEach { categoryTotal ->
-                CategoryItem(
+    Column {
+        SectionHeader(
+            title = stringResource(R.string.home_top_categories),
+            actionLabel = if (strip.showViewAll) stringResource(R.string.home_view_all) else null,
+            actionContentDescription = stringResource(R.string.cd_view_all_categories),
+            onActionClick = if (strip.showViewAll) {
+                { onShowAllClick(month, year) }
+            } else {
+                null
+            }
+        )
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+        ) {
+            items(
+                items = strip.items,
+                key = { it.category },
+                contentType = { HomeContentType.CATEGORY_CARD }
+            ) { categoryTotal ->
+                CategorySnapshotCard(
+                    modifier = Modifier.fillParentMaxWidth(HOME_CATEGORY_CARD_WIDTH_FRACTION),
                     categoryTotal = categoryTotal,
+                    largestTotal = strip.largestTotal,
                     emojiMap = emojiMap,
                     onClick = { onCategoryClick(categoryTotal.category, month, year) }
                 )
             }
-
-            if (hasMoreCategories) {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                ViewAllCategoriesButton(
-                    totalCount = categoryTotals.size,
-                    onClick = { onShowAllClick(month, year) }
-                )
-            }
         }
     }
 }
 
-@Composable
-private fun CategoryItem(
-    categoryTotal: CategoryTotal,
-    emojiMap: Map<String, String>,
-    onClick: () -> Unit
-) {
-    val categoryEmoji = remember(categoryTotal.category, emojiMap) {
-        ExpenseCategories.getCategoryEmoji(categoryTotal.category, emojiMap)
-    }
-    val formattedAmount = remember(categoryTotal.total) {
-        DateUtils.formatAmount(categoryTotal.total, hideZeroDecimals = true)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = dimensionResource(R.dimen.spacing_tiny)),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = categoryEmoji,
-                fontSize = 20.sp,
-                modifier = Modifier.padding(end = dimensionResource(R.dimen.spacing_small))
-            )
-            Text(
-                text = categoryTotal.category,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End
-        ) {
-            Text(
-                text = formattedAmount,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.cd_view_category_details),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_tiny))
-            )
-        }
-    }
-}
-
-@Composable
-private fun ViewAllCategoriesButton(
-    totalCount: Int,
-    onClick: () -> Unit
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = stringResource(R.string.home_view_all_categories, totalCount),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_tiny)))
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = stringResource(R.string.cd_view_all_categories),
-            tint = MaterialTheme.colorScheme.primary
-        )
-    }
-}
+private data class CategoryStrip(
+    val items: List<CategoryTotal>,
+    val largestTotal: Double,
+    val showViewAll: Boolean
+)

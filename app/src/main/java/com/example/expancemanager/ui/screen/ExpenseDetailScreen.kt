@@ -1,44 +1,33 @@
 package com.example.expancemanager.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,37 +37,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expancemanager.R
 import com.example.expancemanager.data.Expense
+import com.example.expancemanager.ui.components.AmountText
+import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppCard
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.components.CategoryAvatar
 import com.example.expancemanager.ui.components.DeleteConfirmationDialog
+import com.example.expancemanager.ui.components.HSpace
+import com.example.expancemanager.ui.components.HeroAmountText
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.SectionHeader
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.viewmodel.ExpenseViewModel
-
-private object ExpenseDetailDimens {
-    val heroIconSize = 72.dp
-    val rowIconSize = 40.dp
-    val dividerInset = 72.dp
-}
-
-private object ExpenseDetailShapes {
-    val heroCard = RoundedCornerShape(20.dp)
-    val sectionCard = RoundedCornerShape(16.dp)
-    val icon = RoundedCornerShape(12.dp)
-    val chip = RoundedCornerShape(12.dp)
-}
 
 private data class ExpenseDetailField(
     val iconEmoji: String,
@@ -86,7 +71,6 @@ private data class ExpenseDetailField(
     val value: String
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ExpenseDetailScreen(
     expenseId: Long,
@@ -95,14 +79,23 @@ internal fun ExpenseDetailScreen(
     onEditExpense: (Long) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val expenseFromMonth = remember(expenseId, uiState.expenses) {
+        uiState.expenses.firstOrNull { it.id == expenseId }
+    }
     var expense by remember { mutableStateOf<Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(expenseId) { expense = viewModel.getExpenseById(expenseId) }
+    LaunchedEffect(expenseId, expenseFromMonth) {
+        expense = expenseFromMonth ?: viewModel.getExpenseById(expenseId)
+    }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            ExpenseDetailTopBar(onNavigateBack = onNavigateBack)
+            AppBackTopBar(
+                title = stringResource(R.string.detail_title),
+                onNavigateBack = onNavigateBack
+            )
         },
         bottomBar = {
             expense?.let { exp ->
@@ -111,8 +104,7 @@ internal fun ExpenseDetailScreen(
                     onDelete = { showDeleteDialog = true }
                 )
             }
-        },
-        containerColor = MaterialTheme.colorScheme.surface
+        }
     ) { paddingValues ->
         val exp = expense
         if (exp == null) {
@@ -150,34 +142,6 @@ internal fun ExpenseDetailScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExpenseDetailTopBar(onNavigateBack: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.detail_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back)
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface
-        )
-    )
-}
-
 @Composable
 private fun ExpenseDetailContent(
     expense: Expense,
@@ -186,7 +150,6 @@ private fun ExpenseDetailContent(
     formattedDate: String,
     contentPadding: PaddingValues
 ) {
-    val defaultPadding = dimensionResource(R.dimen.spacing_default)
     val fields = remember(expense, categoryEmoji, formattedDate) {
         buildList {
             add(ExpenseDetailField("📝", R.string.detail_field_title, expense.title))
@@ -203,11 +166,9 @@ private fun ExpenseDetailContent(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = defaultPadding)
-            .padding(bottom = defaultPadding)
+            .padding(horizontal = AppSpacing.screen)
+            .padding(bottom = AppSpacing.default)
     ) {
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-
         ExpenseDetailHeroCard(
             categoryEmoji = categoryEmoji,
             title = expense.title,
@@ -216,46 +177,24 @@ private fun ExpenseDetailContent(
             date = formattedDate
         )
 
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
+        VSpace(AppSpacing.large)
 
-        ExpenseDetailSectionTitle(text = stringResource(R.string.detail_section_info))
+        SectionHeader(title = stringResource(R.string.detail_section_info))
 
-        ExpenseDetailSectionCard {
+        // One accent for the whole card — the expense's own category color — so the
+        // rows read as a single record rather than four unrelated chips.
+        val accent = MaterialTheme.appColors.accentFor(expense.category)
+        AppCard(contentPadding = 0.dp) {
             fields.forEachIndexed { index, field ->
                 ExpenseDetailInfoRow(
                     iconEmoji = field.iconEmoji,
                     label = stringResource(field.labelRes),
                     value = field.value,
+                    accent = accent,
                     showDivider = index > 0
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ExpenseDetailSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(
-            start = dimensionResource(R.dimen.spacing_tiny),
-            bottom = dimensionResource(R.dimen.spacing_small)
-        )
-    )
-}
-
-@Composable
-private fun ExpenseDetailSectionCard(content: @Composable ColumnScope.() -> Unit) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = ExpenseDetailShapes.sectionCard,
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-    ) {
-        Column(content = content)
     }
 }
 
@@ -267,53 +206,53 @@ private fun ExpenseDetailHeroCard(
     category: String,
     date: String
 ) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = ExpenseDetailShapes.heroCard,
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-    ) {
+    val appColors = MaterialTheme.appColors
+    HeroGradientCard {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_xlarge)),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ExpenseDetailEmojiIcon(
-                emoji = categoryEmoji,
-                size = ExpenseDetailDimens.heroIconSize,
-                fontSize = 36.sp,
-                shape = ExpenseDetailShapes.heroCard
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(AppRadius.card)
+                    .background(appColors.onHero.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = categoryEmoji, fontSize = 34.sp)
+            }
+
+            VSpace(AppSpacing.default)
+
+            OverlineText(
+                text = stringResource(R.string.detail_title),
+                color = appColors.onHeroMuted
             )
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+            VSpace(AppSpacing.small)
+
+            HeroAmountText(
+                text = amount,
+                style = MaterialTheme.typography.displaySmall,
+                color = appColors.onHero
+            )
+
+            VSpace(AppSpacing.small)
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                color = appColors.onHero,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-
-            Text(
-                text = amount,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error
-            )
-
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+            VSpace(AppSpacing.default)
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_small)),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ExpenseDetailChip(text = category)
@@ -324,40 +263,19 @@ private fun ExpenseDetailHeroCard(
 }
 
 @Composable
-private fun ExpenseDetailEmojiIcon(
-    emoji: String,
-    size: Dp,
-    fontSize: TextUnit,
-    shape: Shape = ExpenseDetailShapes.icon,
-    containerColor: Color = MaterialTheme.colorScheme.surface
-) {
-    Surface(
-        modifier = Modifier.size(size),
-        shape = shape,
-        color = containerColor
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = emoji, fontSize = fontSize)
-        }
-    }
-}
-
-@Composable
 private fun ExpenseDetailChip(text: String) {
+    val appColors = MaterialTheme.appColors
     Surface(
-        shape = ExpenseDetailShapes.chip,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+        shape = AppRadius.pill,
+        color = appColors.onHero.copy(alpha = 0.18f)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = appColors.onHero,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(
-                horizontal = dimensionResource(R.dimen.spacing_medium),
-                vertical = dimensionResource(R.dimen.spacing_tiny)
-            )
+            modifier = Modifier.padding(horizontal = AppSpacing.medium, vertical = 6.dp)
         )
     }
 }
@@ -367,41 +285,38 @@ private fun ExpenseDetailInfoRow(
     iconEmoji: String,
     label: String,
     value: String,
+    accent: Color,
     showDivider: Boolean
 ) {
     if (showDivider) {
         HorizontalDivider(
-            modifier = Modifier.padding(start = ExpenseDetailDimens.dividerInset),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            modifier = Modifier.padding(start = 72.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         )
     }
-    ListItem(
-        headlineContent = {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        supportingContent = {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(AppSpacing.default),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CategoryAvatar(emoji = iconEmoji, accent = accent, size = 40.dp, emojiSize = 18.dp)
+        HSpace(AppSpacing.default)
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        },
-        leadingContent = {
-            ExpenseDetailEmojiIcon(
-                emoji = iconEmoji,
-                size = ExpenseDetailDimens.rowIconSize,
-                fontSize = 18.sp,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            VSpace(2.dp)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
             )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
+        }
+    }
 }
 
 @Composable
@@ -409,16 +324,12 @@ private fun ExpenseDetailBottomBar(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Surface(
-        tonalElevation = 3.dp,
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface
-    ) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_default)),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_medium))
+                .padding(horizontal = AppSpacing.screen, vertical = AppSpacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
             ExpenseDetailBottomBarButton(
                 text = stringResource(R.string.action_delete),
@@ -427,7 +338,7 @@ private fun ExpenseDetailBottomBar(
                 modifier = Modifier.weight(1f),
                 outlined = true,
                 contentColor = MaterialTheme.colorScheme.error,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
             )
             ExpenseDetailBottomBarButton(
                 text = stringResource(R.string.action_edit),
@@ -450,23 +361,26 @@ private fun ExpenseDetailBottomBarButton(
     contentColor: Color = MaterialTheme.colorScheme.primary,
     border: BorderStroke? = null
 ) {
-    val iconSpacing = dimensionResource(R.dimen.spacing_small)
     val content: @Composable RowScope.() -> Unit = {
-        Icon(icon, contentDescription = null, modifier = Modifier.padding(end = iconSpacing))
-        Text(text)
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        HSpace(AppSpacing.small)
+        Text(text, style = MaterialTheme.typography.labelLarge)
     }
     if (outlined) {
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.height(52.dp),
+            shape = AppRadius.pill,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor),
-            border = border
-        ) {
-            content()
-        }
+            border = border,
+            content = content
+        )
     } else {
-        Button(onClick = onClick, modifier = modifier) {
-            content()
-        }
+        Button(
+            onClick = onClick,
+            modifier = modifier.height(52.dp),
+            shape = AppRadius.pill,
+            content = content
+        )
     }
 }

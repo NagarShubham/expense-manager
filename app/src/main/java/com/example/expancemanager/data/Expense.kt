@@ -1,9 +1,11 @@
 package com.example.expancemanager.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+@Immutable
 @Entity(
     tableName = "expenses",
     indices = [

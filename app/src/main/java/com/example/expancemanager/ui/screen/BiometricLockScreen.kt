@@ -1,6 +1,7 @@
 package com.example.expancemanager.ui.screen
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,7 +36,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
 import com.example.expancemanager.R
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.BiometricAuthenticator
 
 /**
@@ -132,52 +140,84 @@ private fun BiometricLockGate(
     )
 }
 
+/**
+ * Full-screen lock gate. Painted on the brand gradient so the very first thing the
+ * app shows is its own identity rather than a blank surface.
+ */
 @Composable
 private fun BiometricLockScreen(
     errorMessage: String? = null,
     onUnlockClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    val appColors = MaterialTheme.appColors
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(appColors.heroGradient))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(dimensionResource(R.dimen.spacing_xlarge)),
+                .padding(AppSpacing.xxlarge),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "🔒",
-                fontSize = 48.sp
-            )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+            Surface(
+                modifier = Modifier.size(88.dp),
+                shape = AppRadius.hero,
+                color = appColors.onHero.copy(alpha = 0.16f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(text = "🔒", fontSize = 40.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(AppSpacing.xlarge))
             Text(
                 text = stringResource(R.string.biometric_lock_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineMedium,
+                color = appColors.onHero,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
+            Spacer(modifier = Modifier.height(AppSpacing.small))
             Text(
                 text = stringResource(R.string.biometric_lock_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = appColors.onHeroMuted,
                 textAlign = TextAlign.Center
             )
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
-                Text(
-                    text = errorMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
+                Spacer(modifier = Modifier.height(AppSpacing.default))
+                Surface(
+                    shape = AppRadius.chip,
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(
+                            horizontal = AppSpacing.default,
+                            vertical = AppSpacing.small
+                        )
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
-            Button(onClick = onUnlockClick) {
-                Text(stringResource(R.string.biometric_unlock_button))
+            Spacer(modifier = Modifier.height(AppSpacing.xxlarge))
+            Button(
+                onClick = onUnlockClick,
+                shape = AppRadius.pill,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = appColors.onHero,
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.height(52.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.biometric_unlock_button),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = AppSpacing.large)
+                )
             }
         }
     }

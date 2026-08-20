@@ -7,9 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
@@ -77,15 +77,14 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun MainContent() {
+        val entryProvider = remember(viewModel) { appNavGraph(viewModel) }
         NavDisplay(
             backStack = viewModel.backStack,
             modifier = Modifier.fillMaxSize(),
-            entryProvider = appNavGraph(viewModel)
+            entryProvider = entryProvider
         )
     }
 
-    @Stable
-    @Composable
     private fun appNavGraph(viewModel: ExpenseViewModel) =
         entryProvider {
             entry<HomeScreenRoute> {

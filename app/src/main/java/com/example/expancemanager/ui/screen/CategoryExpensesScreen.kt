@@ -3,25 +3,25 @@ package com.example.expancemanager.ui.screen
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import com.example.expancemanager.R
 import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppSpacing
 import com.example.expancemanager.ui.components.EmptyStateMessage
 import com.example.expancemanager.ui.components.ExpenseItemCard
 import com.example.expancemanager.ui.components.PeriodSummaryHeader
+import com.example.expancemanager.ui.components.SectionHeader
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.viewmodel.ExpenseViewModel
@@ -37,14 +37,11 @@ internal fun CategoryExpensesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Filter expenses by category
     val categoryExpenses = remember(uiState.expenses, category) {
         uiState.expenses.filter { it.category == category }
     }
-
-    // Calculate total for this category
-    val categoryTotal = remember(categoryExpenses) {
-        categoryExpenses.sumOf { it.amount }
+    val categoryTotal = remember(uiState.categoryTotals, category) {
+        uiState.categoryTotals.firstOrNull { it.category == category }?.total ?: 0.0
     }
     val formattedTotal = remember(categoryTotal) { DateUtils.formatAmount(categoryTotal) }
     val monthLabel = remember(month, year) { DateUtils.formatMonthYear(month, year) }
@@ -53,12 +50,11 @@ internal fun CategoryExpensesScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AppBackTopBar(
                 title = category,
-                onNavigateBack = onNavigateBack,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                onNavigateBack = onNavigateBack
             )
         }
     ) { paddingValues ->
@@ -75,8 +71,6 @@ internal fun CategoryExpensesScreen(
                 } else {
                     stringResource(R.string.category_transaction_count_plural, categoryExpenses.size)
                 },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 emoji = categoryEmoji
             )
 
@@ -90,15 +84,13 @@ internal fun CategoryExpensesScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = dimensionResource(R.dimen.spacing_default)),
-                    contentPadding = PaddingValues(vertical = dimensionResource(R.dimen.spacing_small))
+                        .padding(horizontal = AppSpacing.screen),
+                    contentPadding = PaddingValues(bottom = AppSpacing.xlarge)
                 ) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.category_all_transactions),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = dimensionResource(R.dimen.spacing_small))
+                    item(key = "section_header") {
+                        SectionHeader(
+                            title = stringResource(R.string.category_all_transactions),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 

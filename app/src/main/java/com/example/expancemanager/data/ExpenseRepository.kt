@@ -19,7 +19,8 @@ internal class ExpenseRepository(
     internal fun getExpensesByDateRange(
         startDate: Long,
         endDate: Long
-    ): Flow<List<Expense>> = expenseDao.getExpensesByDateRange(startDate, endDate)
+    ): Flow<List<Expense>> =
+        expenseDao.getExpensesByDateRange(startDate, endDate).distinctUntilChanged()
 
     internal suspend fun getExpenseById(id: Long): Expense? = expenseDao.getExpenseById(id)
 
@@ -37,12 +38,14 @@ internal class ExpenseRepository(
     internal fun getCategoryTotalsByDateRange(
         startDate: Long,
         endDate: Long
-    ): Flow<List<CategoryTotal>> = expenseDao.getCategoryTotalsByDateRange(startDate, endDate)
+    ): Flow<List<CategoryTotal>> =
+        expenseDao.getCategoryTotalsByDateRange(startDate, endDate).distinctUntilChanged()
 
     internal fun getMonthlyTotalsByDateRange(
         startDate: Long,
         endDate: Long
-    ): Flow<List<MonthlyTotal>> = expenseDao.getMonthlyTotalsByDateRange(startDate, endDate)
+    ): Flow<List<MonthlyTotal>> =
+        expenseDao.getMonthlyTotalsByDateRange(startDate, endDate).distinctUntilChanged()
 
     internal suspend fun getAllExpensesForExport(): List<Expense> = expenseDao.getAllExpensesForExport()
 

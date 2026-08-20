@@ -1,5 +1,6 @@
 package com.example.expancemanager.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -11,6 +12,7 @@ import androidx.room.PrimaryKey
  * [CategoryRepository.updateCategory]). [emoji] is shown throughout the UI and
  * [sortOrder] controls the display order the user arranges.
  */
+@Immutable
 @Entity(tableName = "categories")
 internal data class Category(
     @PrimaryKey val name: String,

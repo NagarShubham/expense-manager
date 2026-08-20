@@ -1,6 +1,7 @@
 package com.example.expancemanager.data
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Single entry point for budget-related data. Wraps [MonthlyBudgetDao] and
@@ -13,7 +14,8 @@ internal class BudgetRepository(
     internal fun getBudgetByMonthYear(
         month: Int,
         year: Int
-    ): Flow<MonthlyBudget?> = monthlyBudgetDao.getBudgetByMonthYear(month, year)
+    ): Flow<MonthlyBudget?> =
+        monthlyBudgetDao.getBudgetByMonthYear(month, year).distinctUntilChanged()
 
     internal suspend fun getBudgetByMonthYearOnce(
         month: Int,
@@ -30,7 +32,8 @@ internal class BudgetRepository(
     internal fun getExcludedCategoriesByMonthYear(
         month: Int,
         year: Int
-    ): Flow<List<String>> = budgetExcludedCategoryDao.getExcludedByMonthYear(month, year)
+    ): Flow<List<String>> =
+        budgetExcludedCategoryDao.getExcludedByMonthYear(month, year).distinctUntilChanged()
 
     internal suspend fun setCategoryExcluded(
         month: Int,

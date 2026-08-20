@@ -1,20 +1,21 @@
 package com.example.expancemanager.ui.screen
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,14 +40,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expancemanager.R
 import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppCard
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.components.CategoryAvatar
+import com.example.expancemanager.ui.components.HSpace
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.SectionHeader
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.TabularFigures
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.util.showShortToast
@@ -66,15 +81,26 @@ private fun BudgetMonthYearDropdown(
 ) {
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = onExpandedChange
+        onExpandedChange = onExpandedChange,
+        modifier = modifier
     ) {
         OutlinedTextField(
             value = value,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
+            shape = AppRadius.chip,
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            ),
             trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-            modifier = modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -125,166 +151,243 @@ internal fun BudgetSettingsScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AppBackTopBar(
                 title = stringResource(R.string.budget_screen_title),
+                subtitle = DateUtils.formatMonthYear(selectedMonth, selectedYear),
                 onNavigateBack = onNavigateBack,
-                backContentDescription = stringResource(R.string.cd_navigate_back),
-                titleFontWeight = FontWeight.Normal
+                backContentDescription = stringResource(R.string.cd_navigate_back)
             )
         }
     ) { paddingValues ->
+        val amount = amountText.toDoubleOrNull() ?: 0.0
+        val hasExistingBudget = amountText.isNotBlank() && amount > 0
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(dimensionResource(R.dimen.spacing_default))
+                .padding(horizontal = AppSpacing.screen)
+                .padding(bottom = AppSpacing.xlarge)
         ) {
+            BudgetAmountHero(
+                amountText = amountText,
+                onAmountChange = { new ->
+                    val filtered = new.filter { c -> c.isDigit() || c == '.' }
+                    if (filtered.count { it == '.' } <= 1) amountText = filtered
+                }
+            )
+
+            VSpace(AppSpacing.default)
+
             Text(
                 text = stringResource(R.string.settings_budget_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = dimensionResource(R.dimen.spacing_medium))
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            BudgetMonthYearDropdown(
-                label = stringResource(R.string.budget_month),
-                value = DateUtils.formatMonthYear(selectedMonth, selectedYear),
-                expanded = showMonthMenu,
-                onExpandedChange = { showMonthMenu = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                monthOptions.forEach { month ->
-                    key(month) {
-                        DropdownMenuItem(
-                            text = { Text(DateUtils.formatMonthYear(month, selectedYear)) },
-                            onClick = {
-                                selectedMonth = month
-                                showMonthMenu = false
+            VSpace(AppSpacing.large)
+
+            SectionHeader(title = stringResource(R.string.budget_period_section))
+
+            AppCard(contentPadding = AppSpacing.default) {
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)) {
+                    BudgetMonthYearDropdown(
+                        label = stringResource(R.string.budget_month),
+                        value = DateUtils.formatMonthYear(selectedMonth, selectedYear),
+                        expanded = showMonthMenu,
+                        onExpandedChange = { showMonthMenu = it },
+                        modifier = Modifier.weight(1.4f)
+                    ) {
+                        monthOptions.forEach { month ->
+                            key(month) {
+                                DropdownMenuItem(
+                                    text = { Text(DateUtils.formatMonthYear(month, selectedYear)) },
+                                    onClick = {
+                                        selectedMonth = month
+                                        showMonthMenu = false
+                                    }
+                                )
                             }
-                        )
+                        }
+                    }
+
+                    BudgetMonthYearDropdown(
+                        label = stringResource(R.string.budget_year),
+                        value = selectedYear.toString(),
+                        expanded = showYearMenu,
+                        onExpandedChange = { showYearMenu = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        yearRange.forEach { year ->
+                            key(year) {
+                                DropdownMenuItem(
+                                    text = { Text(year.toString()) },
+                                    onClick = {
+                                        selectedYear = year
+                                        showYearMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+                VSpace(AppSpacing.default)
 
-            BudgetMonthYearDropdown(
-                label = stringResource(R.string.budget_year),
-                value = selectedYear.toString(),
-                expanded = showYearMenu,
-                onExpandedChange = { showYearMenu = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                yearRange.forEach { year ->
-                    key(year) {
-                        DropdownMenuItem(
-                            text = { Text(year.toString()) },
-                            onClick = {
-                                selectedYear = year
-                                showYearMenu = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
-
-            OutlinedTextField(
-                value = amountText,
-                onValueChange = { new ->
-                    val f = new.filter { c -> c.isDigit() || c == '.' }
-                    if (f.count { it == '.' } <= 1) amountText = f
-                },
-                label = { Text(stringResource(R.string.budget_dialog_hint)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
-
-            val amount = amountText.toDoubleOrNull() ?: 0.0
-            val hasExistingBudget = amountText.isNotBlank() && amount > 0
-
-            Button(
-                onClick = {
-                    if (amount <= 0) {
-                        context.showShortToast(context.getString(R.string.budget_invalid_amount))
-                        return@Button
-                    }
-                    scope.launch {
-                        viewModel.setMonthlyBudgetAndWait(selectedMonth, selectedYear, amount)
-                        context.showShortToast(context.getString(R.string.budget_saved))
-                        onNavigateBack()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = if (hasExistingBudget) {
-                        stringResource(R.string.budget_dialog_save)
-                    } else {
-                        stringResource(R.string.budget_set_budget)
-                    }
-                )
-            }
-
-            if (hasExistingBudget) {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
-                OutlinedButton(
+                Button(
                     onClick = {
+                        if (amount <= 0) {
+                            context.showShortToast(context.getString(R.string.budget_invalid_amount))
+                            return@Button
+                        }
                         scope.launch {
-                            viewModel.clearMonthlyBudget(selectedMonth, selectedYear)
-                            amountText = ""
-                            context.showShortToast(context.getString(R.string.budget_cleared))
+                            viewModel.setMonthlyBudgetAndWait(selectedMonth, selectedYear, amount)
+                            context.showShortToast(context.getString(R.string.budget_saved))
+                            onNavigateBack()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    shape = AppRadius.pill,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
-                    Text(stringResource(R.string.budget_clear))
+                    Text(
+                        text = if (hasExistingBudget) {
+                            stringResource(R.string.budget_dialog_save)
+                        } else {
+                            stringResource(R.string.budget_set_budget)
+                        },
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+
+                if (hasExistingBudget) {
+                    VSpace(AppSpacing.small)
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                viewModel.clearMonthlyBudget(selectedMonth, selectedYear)
+                                amountText = ""
+                                context.showShortToast(context.getString(R.string.budget_cleared))
+                            }
+                        },
+                        shape = AppRadius.pill,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.budget_clear),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
+            VSpace(AppSpacing.large)
 
             // Categories excluded from budget
-            Text(
-                text = stringResource(R.string.budget_excluded_categories_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = dimensionResource(R.dimen.spacing_small))
-            )
+            SectionHeader(title = stringResource(R.string.budget_excluded_categories_title))
             Text(
                 text = stringResource(R.string.budget_excluded_categories_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = dimensionResource(R.dimen.spacing_medium))
+                modifier = Modifier.padding(bottom = AppSpacing.medium)
             )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Column(modifier = Modifier.padding(dimensionResource(R.dimen.spacing_default))) {
-                    allCategories.forEach { cat ->
+
+            AppCard(contentPadding = AppSpacing.small) {
+                allCategories.forEach { cat ->
+                    key(cat) {
+                        val isExcluded = cat in excludedCategoryNames
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(AppRadius.chip)
+                                .clickable {
+                                    viewModel.setCategoryExcludedFromBudget(
+                                        selectedMonth,
+                                        selectedYear,
+                                        cat,
+                                        !isExcluded
+                                    )
+                                }
+                                .padding(horizontal = AppSpacing.small, vertical = AppSpacing.small),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Checkbox(
-                                checked = cat in excludedCategoryNames,
-                                onCheckedChange = { viewModel.setCategoryExcludedFromBudget(selectedMonth, selectedYear, cat, it) }
+                            CategoryAvatar(
+                                emoji = ExpenseCategories.getCategoryEmoji(cat, emojiMap),
+                                accent = MaterialTheme.appColors.accentFor(cat),
+                                size = 36.dp,
+                                emojiSize = 18.dp
                             )
+                            HSpace(AppSpacing.medium)
                             Text(
-                                text = "${ExpenseCategories.getCategoryEmoji(cat, emojiMap)} $cat",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_small))
+                                text = cat,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Checkbox(
+                                checked = isExcluded,
+                                onCheckedChange = {
+                                    viewModel.setCategoryExcludedFromBudget(
+                                        selectedMonth,
+                                        selectedYear,
+                                        cat,
+                                        it
+                                    )
+                                }
                             )
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** The budget amount gets the hero treatment, same as the amount on Add Expense. */
+@Composable
+private fun BudgetAmountHero(
+    amountText: String,
+    onAmountChange: (String) -> Unit
+) {
+    val appColors = MaterialTheme.appColors
+    HeroGradientCard {
+        OverlineText(
+            text = stringResource(R.string.budget_dialog_hint),
+            color = appColors.onHeroMuted
+        )
+        VSpace(AppSpacing.small)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = stringResource(R.string.currency_symbol),
+                style = MaterialTheme.typography.headlineMedium,
+                color = appColors.onHeroMuted,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            HSpace(AppSpacing.small)
+            Box(modifier = Modifier.weight(1f)) {
+                if (amountText.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.expense_amount_placeholder),
+                        style = MaterialTheme.typography.displaySmall.merge(TabularFigures),
+                        color = appColors.onHero.copy(alpha = 0.4f)
+                    )
+                }
+                BasicTextField(
+                    value = amountText,
+                    onValueChange = onAmountChange,
+                    textStyle = MaterialTheme.typography.displaySmall
+                        .merge(TabularFigures)
+                        .copy(color = appColors.onHero),
+                    singleLine = true,
+                    cursorBrush = SolidColor(appColors.onHero),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

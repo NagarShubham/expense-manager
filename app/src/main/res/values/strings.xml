@@ -19,14 +19,24 @@
     <string name="cd_swipe_to_delete">Swipe to delete</string>
     <string name="cd_navigate_back">Navigate back</string>
 
+    <!-- Amounts -->
+    <string name="amount_negative">%1$s</string>
+
     <!-- Home Screen -->
     <string name="home_total_expenses">Total Expenses</string>
+    <string name="home_total_spent">Total spent</string>
     <string name="home_category_breakdown">Category Breakdown</string>
-    <string name="home_recent_transactions">Recent Transactions</string>
+    <string name="home_top_categories">Top categories</string>
+    <string name="home_recent_transactions">Recent transactions</string>
     <string name="home_view_all_categories">View All %d Categories</string>
+    <string name="home_view_all">View all</string>
+    <string name="home_transactions_count">%d transactions this month</string>
+    <string name="home_transactions_count_singular">1 transaction this month</string>
     <string name="home_empty_title">No expenses yet</string>
-    <string name="home_empty_subtitle">Tap the + button to add your first expense</string>
+    <string name="home_empty_subtitle">Add your first expense to start tracking where your money goes</string>
+    <string name="home_empty_action">Add expense</string>
     <string name="home_empty_emoji">📊</string>
+    <string name="home_no_budget_hint">No budget set for this month</string>
     <string name="budget_summary_left">%1$s left of %2$s budget</string>
     <string name="budget_summary_over">%1$s over budget</string>
     <string name="budget_summary_used_of">Used %1$s of %2$s</string>
@@ -36,6 +46,7 @@
     <string name="budget_dialog_hint">Amount</string>
     <string name="budget_dialog_save">Save</string>
     <string name="budget_screen_title">Monthly budget</string>
+    <string name="budget_period_section">Period</string>
     <string name="budget_month">Month</string>
     <string name="budget_year">Year</string>
     <string name="budget_clear">Clear budget</string>
@@ -78,6 +89,8 @@
     <string name="expense_field_description">Description (Optional)</string>
     <string name="expense_button_add">Add Expense</string>
     <string name="expense_button_update">Update Expense</string>
+    <string name="expense_section_details">Details</string>
+    <string name="expense_amount_placeholder">0</string>
     <string name="currency_symbol">₹</string>
 
     <!-- Expense Detail Screen -->

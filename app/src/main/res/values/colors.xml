@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- All colors are managed by Material 3 theme system -->
-    <!-- Legacy color resources removed for cleaner codebase -->
+    <!-- Runtime colors are managed by the Compose Material 3 theme (ui/theme/Color.kt). -->
+    <!-- This one exists only for the pre-Compose window background, so the cold-start
+         frame matches the app surface instead of flashing platform white. Keep it in
+         sync with LightSurface / DarkSurface. -->
+    <color name="window_background">#FFF6F9F7</color>
 </resources>
