@@ -1,0 +1,60 @@
+name: Android CI
+
+on:
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build-and-test:
+    name: Build, Lint, and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Set up JDK 17 (Standard for modern Android development)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # 3. Grant execute permission to Gradle wrapper
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 4. Run Lint Check
+      - name: Run Lint
+        run: ./gradlew lintDebug
+
+      # 5. Run Unit Tests
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest
+
+      # 6. Generate Test Coverage Report
+      - name: Generate Coverage Report
+        run: ./gradlew jacocoTestReport # Replace with your specific coverage task if using Kover or another plugin
+
+      # 7. Generate Debug APK
+      - name: Generate APK
+        run: ./gradlew assembleDebug
+
+      # 8. Upload APK as an Artifact (so you can download it from GitHub)
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      # 9. Upload Test Results / Reports on Failure (or success)
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always() # Runs even if previous steps fail so you can inspect reports
+        with:
+          name: test-and-lint-reports
+          path: |
+            app/build/reports/
+            app/build/outputs/lint-results-debug.html
