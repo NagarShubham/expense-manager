@@ -1,0 +1,63 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [master]
+    # opened starts the first run; synchronize/reopened keep CI current and
+    # pair with concurrency so obsolete runs are cancelled on new commits.
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Lint, unit tests, coverage, and debug APK
+        run: >
+          ./gradlew --no-daemon --build-cache
+          ktlintCheck lintDebug
+          testDebugUnitTest createDebugUnitTestCoverageReport
+          assembleDebug
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            app/build/reports/coverage/
+            app/build/reports/jacoco/
+            app/build/reports/tests/testDebugUnitTest/
+          retention-days: 1
+          if-no-files-found: warn
+          compression-level: 9
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/**/*.apk
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 9

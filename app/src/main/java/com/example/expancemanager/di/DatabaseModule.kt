@@ -7,10 +7,10 @@ import com.example.expancemanager.data.BudgetRepository
 import com.example.expancemanager.data.CategoryDao
 import com.example.expancemanager.data.CategoryRepository
 import com.example.expancemanager.data.ExpenseDao
-import com.example.expancemanager.data.TransactionRunner
 import com.example.expancemanager.data.ExpenseDatabase
 import com.example.expancemanager.data.ExpenseRepository
 import com.example.expancemanager.data.MonthlyBudgetDao
+import com.example.expancemanager.data.TransactionRunner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

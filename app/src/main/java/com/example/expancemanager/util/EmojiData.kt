@@ -112,5 +112,4 @@ internal object EmojiData {
             )
         )
     )
-
 }

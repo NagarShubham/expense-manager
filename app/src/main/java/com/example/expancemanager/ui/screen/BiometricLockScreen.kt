@@ -1,8 +1,8 @@
 package com.example.expancemanager.ui.screen
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +42,7 @@ import com.example.expancemanager.util.BiometricAuthenticator
  */
 internal interface BiometricLockHandle {
     fun beginExternalFlow()
+
     fun endExternalFlow()
 }
 

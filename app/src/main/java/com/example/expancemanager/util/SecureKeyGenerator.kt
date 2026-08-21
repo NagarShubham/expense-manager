@@ -68,5 +68,4 @@ internal object SecureKeyGenerator {
     ) {
         EncryptedPrefs.get(context, PREFS_NAME).edit { putString(KEY_PASSPHRASE, passphrase) }
     }
-
 }

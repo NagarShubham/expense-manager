@@ -58,6 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +93,7 @@ internal fun ManageCategoriesScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val categories by viewModel.categories.collectAsState()
 
@@ -193,9 +195,9 @@ internal fun ManageCategoriesScreen(
                     when (result) {
                         CategoryResult.Success -> editingCategory = null
                         CategoryResult.BlankName ->
-                            context.showToast(context.getString(R.string.category_error_blank))
+                            context.showToast(resources.getString(R.string.category_error_blank))
                         CategoryResult.DuplicateName ->
-                            context.showToast(context.getString(R.string.category_error_duplicate))
+                            context.showToast(resources.getString(R.string.category_error_duplicate))
                         CategoryResult.InUse -> Unit
                     }
                 }
@@ -217,7 +219,7 @@ internal fun ManageCategoriesScreen(
                     scope.launch {
                         if (viewModel.deleteCategory(toDelete.name) == CategoryResult.InUse) {
                             context.showToast(
-                                context.getString(R.string.category_error_in_use)
+                                resources.getString(R.string.category_error_in_use)
                             )
                         }
                     }

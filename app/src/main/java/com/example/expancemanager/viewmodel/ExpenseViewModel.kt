@@ -48,108 +48,110 @@ internal data class ExpenseUiState(
 }
 
 @HiltViewModel
-internal class ExpenseViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository,
-    private val budgetRepository: BudgetRepository,
-    private val categoryRepository: CategoryRepository
-) : ViewModel() {
-    private val _uiState = MutableStateFlow(ExpenseUiState())
-    internal val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+internal class ExpenseViewModel
+    @Inject
+    constructor(
+        private val expenseRepository: ExpenseRepository,
+        private val budgetRepository: BudgetRepository,
+        private val categoryRepository: CategoryRepository
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(ExpenseUiState())
+        internal val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
-    /** Single source of truth for which month/year to load; one collector reacts to this. */
-    private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
+        /** Single source of truth for which month/year to load; one collector reacts to this. */
+        private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
-    internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
+        internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
 
-    /** Pushes a route onto the back stack. */
-    internal fun navigateTo(route: AppRoute) {
-        backStack.add(route)
-    }
-
-    /** Pops the current route; no-op if only the root (e.g. Home) remains. */
-    internal fun navigateBack() {
-        if (backStack.size > 1) {
-            backStack.removeAt(backStack.lastIndex)
+        /** Pushes a route onto the back stack. */
+        internal fun navigateTo(route: AppRoute) {
+            backStack.add(route)
         }
-    }
 
-    init {
-        viewModelScope.launch {
-            val monthlyStateFlow =
-                selectedMonthYearFlow.flatMapLatest { (month, year) ->
-                    val (startDate, endDate) = DateUtils.getMonthDateRange(month, year)
-                    combine(
-                        expenseRepository.getExpensesByDateRange(startDate, endDate),
-                        expenseRepository.getTotalAmountByDateRange(startDate, endDate),
-                        expenseRepository.getCategoryTotalsByDateRange(startDate, endDate),
-                        budgetRepository.getBudgetByMonthYear(month, year),
-                        budgetRepository.getExcludedCategoriesByMonthYear(month, year)
-                    ) { expenses, total, categoryTotals, budget, excludedList ->
-                        val excluded = excludedList.toSet()
-                        val totalAmount = total ?: 0.0
-                        // Sum over the already-aggregated per-category totals (from SQL GROUP BY)
-                        // rather than re-scanning every expense row.
-                        val excludedSum = categoryTotals.filter { it.category in excluded }.sumOf { it.total }
-                        val totalAmountForBudget = (totalAmount - excludedSum).coerceAtLeast(0.0)
-                        ExpenseUiState(
-                            expenses = expenses,
-                            totalAmount = totalAmount,
-                            categoryTotals = categoryTotals,
-                            selectedMonth = month,
-                            selectedYear = year,
-                            expectedMonthlyAmount = budget?.expectedAmount,
-                            totalAmountForBudget = totalAmountForBudget,
-                            excludedCategoryNames = excluded
-                        )
+        /** Pops the current route; no-op if only the root (e.g. Home) remains. */
+        internal fun navigateBack() {
+            if (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
+
+        init {
+            viewModelScope.launch {
+                val monthlyStateFlow =
+                    selectedMonthYearFlow.flatMapLatest { (month, year) ->
+                        val (startDate, endDate) = DateUtils.getMonthDateRange(month, year)
+                        combine(
+                            expenseRepository.getExpensesByDateRange(startDate, endDate),
+                            expenseRepository.getTotalAmountByDateRange(startDate, endDate),
+                            expenseRepository.getCategoryTotalsByDateRange(startDate, endDate),
+                            budgetRepository.getBudgetByMonthYear(month, year),
+                            budgetRepository.getExcludedCategoriesByMonthYear(month, year)
+                        ) { expenses, total, categoryTotals, budget, excludedList ->
+                            val excluded = excludedList.toSet()
+                            val totalAmount = total ?: 0.0
+                            // Sum over the already-aggregated per-category totals (from SQL GROUP BY)
+                            // rather than re-scanning every expense row.
+                            val excludedSum = categoryTotals.filter { it.category in excluded }.sumOf { it.total }
+                            val totalAmountForBudget = (totalAmount - excludedSum).coerceAtLeast(0.0)
+                            ExpenseUiState(
+                                expenses = expenses,
+                                totalAmount = totalAmount,
+                                categoryTotals = categoryTotals,
+                                selectedMonth = month,
+                                selectedYear = year,
+                                expectedMonthlyAmount = budget?.expectedAmount,
+                                totalAmountForBudget = totalAmountForBudget,
+                                excludedCategoryNames = excluded
+                            )
+                        }
                     }
-                }
 
-            // Categories are month-independent; merge them in so every screen sees the
-            // latest names/emojis regardless of the selected month.
-            combine(monthlyStateFlow, categoryRepository.getCategories()) { state, categories ->
-                state.copy(categories = categories)
-            }.collect { _uiState.value = it }
-        }
-    }
-
-    internal fun loadExpensesForMonth(
-        month: Int,
-        year: Int
-    ) {
-        selectedMonthYearFlow.value = month to year
-    }
-
-    internal fun insertExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.insertExpense(expense)
-        }
-    }
-
-    internal fun updateExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.updateExpense(expense)
-        }
-    }
-
-    internal fun deleteExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.deleteExpense(expense)
-        }
-    }
-
-    internal suspend fun getExpenseById(id: Long): Expense? =
-        withContext(Dispatchers.IO) {
-            expenseRepository.getExpenseById(id)
+                // Categories are month-independent; merge them in so every screen sees the
+                // latest names/emojis regardless of the selected month.
+                combine(monthlyStateFlow, categoryRepository.getCategories()) { state, categories ->
+                    state.copy(categories = categories)
+                }.collect { _uiState.value = it }
+            }
         }
 
-    internal fun changeMonth(increment: Int) {
-        val (month, year) = selectedMonthYearFlow.value
-        val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
-        loadExpensesForMonth(newMonth, newYear)
-    }
+        internal fun loadExpensesForMonth(
+            month: Int,
+            year: Int
+        ) {
+            selectedMonthYearFlow.value = month to year
+        }
 
-    internal fun goToCurrentMonth() {
-        val (month, year) = DateUtils.currentMonthYear()
-        loadExpensesForMonth(month, year)
+        internal fun insertExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.insertExpense(expense)
+            }
+        }
+
+        internal fun updateExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.updateExpense(expense)
+            }
+        }
+
+        internal fun deleteExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.deleteExpense(expense)
+            }
+        }
+
+        internal suspend fun getExpenseById(id: Long): Expense? =
+            withContext(Dispatchers.IO) {
+                expenseRepository.getExpenseById(id)
+            }
+
+        internal fun changeMonth(increment: Int) {
+            val (month, year) = selectedMonthYearFlow.value
+            val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
+            loadExpensesForMonth(newMonth, newYear)
+        }
+
+        internal fun goToCurrentMonth() {
+            val (month, year) = DateUtils.currentMonthYear()
+            loadExpensesForMonth(month, year)
+        }
     }
-}

@@ -15,46 +15,48 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-internal class CategoryViewModel @Inject constructor(
-    private val categoryRepository: CategoryRepository
-) : ViewModel() {
-    internal val categories: StateFlow<List<Category>> =
-        categoryRepository
-            .getCategories()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+internal class CategoryViewModel
+    @Inject
+    constructor(
+        private val categoryRepository: CategoryRepository
+    ) : ViewModel() {
+        internal val categories: StateFlow<List<Category>> =
+            categoryRepository
+                .getCategories()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    internal suspend fun addCategory(
-        name: String,
-        emoji: String
-    ): CategoryResult =
-        withContext(Dispatchers.IO) {
-            categoryRepository.addCategory(name, emoji)
-        }
+        internal suspend fun addCategory(
+            name: String,
+            emoji: String
+        ): CategoryResult =
+            withContext(Dispatchers.IO) {
+                categoryRepository.addCategory(name, emoji)
+            }
 
-    internal suspend fun updateCategory(
-        oldName: String,
-        newName: String,
-        emoji: String
-    ): CategoryResult =
-        withContext(Dispatchers.IO) {
-            categoryRepository.updateCategory(oldName, newName, emoji)
-        }
+        internal suspend fun updateCategory(
+            oldName: String,
+            newName: String,
+            emoji: String
+        ): CategoryResult =
+            withContext(Dispatchers.IO) {
+                categoryRepository.updateCategory(oldName, newName, emoji)
+            }
 
-    internal suspend fun deleteCategory(name: String): CategoryResult =
-        withContext(Dispatchers.IO) {
-            categoryRepository.deleteCategory(name)
-        }
+        internal suspend fun deleteCategory(name: String): CategoryResult =
+            withContext(Dispatchers.IO) {
+                categoryRepository.deleteCategory(name)
+            }
 
-    /** Moves the category at [fromIndex] one position up or down and persists the new order. */
-    internal fun moveCategory(
-        fromIndex: Int,
-        toIndex: Int
-    ) {
-        val current = categories.value
-        if (fromIndex !in current.indices || toIndex !in current.indices) return
-        val reordered = current.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
-        viewModelScope.launch(Dispatchers.IO) {
-            categoryRepository.reorder(reordered.map { it.name })
+        /** Moves the category at [fromIndex] one position up or down and persists the new order. */
+        internal fun moveCategory(
+            fromIndex: Int,
+            toIndex: Int
+        ) {
+            val current = categories.value
+            if (fromIndex !in current.indices || toIndex !in current.indices) return
+            val reordered = current.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+            viewModelScope.launch(Dispatchers.IO) {
+                categoryRepository.reorder(reordered.map { it.name })
+            }
         }
     }
-}

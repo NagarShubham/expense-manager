@@ -33,6 +33,7 @@ android {
         debug {
             isMinifyEnabled = false
             isShrinkResources = false
+            enableUnitTestCoverage = true
         }
     }
     compileOptions {
