@@ -61,6 +61,44 @@ internal interface ExpenseDao {
         startDate: Long,
         endDate: Long
     ): Flow<List<MonthlyTotal>>
+    /**
+     * History-wide search. Every filter is optional: a null (or blank, for [query])
+     * parameter disables that clause, so one prepared statement serves every filter
+     * combination the UI can build.
+     *
+     * [sortOrder] is an ordinal from [ExpenseSortOrder] rather than a string spliced into
+     * the SQL — this keeps the query compile-time verified and injection-proof.
+     */
+    @Query(
+        """
+        SELECT * FROM expenses
+        WHERE (:query = '' OR title LIKE '%' || :query || '%' COLLATE NOCASE
+                          OR description LIKE '%' || :query || '%' COLLATE NOCASE)
+          AND (:ignoreCategories = 1 OR category IN (:categories))
+          AND (:minAmount IS NULL OR amount >= :minAmount)
+          AND (:maxAmount IS NULL OR amount <= :maxAmount)
+          AND (:startDate IS NULL OR date >= :startDate)
+          AND (:endDate IS NULL OR date <= :endDate)
+        ORDER BY
+          CASE WHEN :sortOrder = 0 THEN date END DESC,
+          CASE WHEN :sortOrder = 1 THEN date END ASC,
+          CASE WHEN :sortOrder = 2 THEN amount END DESC,
+          CASE WHEN :sortOrder = 3 THEN amount END ASC,
+          id DESC
+        LIMIT :limit
+        """
+    )
+    fun searchExpenses(
+        query: String,
+        categories: List<String>,
+        ignoreCategories: Int,
+        minAmount: Double?,
+        maxAmount: Double?,
+        startDate: Long?,
+        endDate: Long?,
+        sortOrder: Int,
+        limit: Int
+    ): Flow<List<Expense>>
 
     @Query("SELECT COUNT(*) FROM expenses WHERE category = :name")
     suspend fun countExpensesInCategory(name: String): Int

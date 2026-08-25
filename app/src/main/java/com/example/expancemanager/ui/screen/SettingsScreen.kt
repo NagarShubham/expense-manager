@@ -51,7 +51,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expancemanager.R
+import com.example.expancemanager.ui.components.AmountText
 import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.ui.components.SettingsActionRow
 import com.example.expancemanager.ui.components.SettingsGroupCard
 import com.example.expancemanager.ui.components.SettingsNavigationRow
@@ -135,11 +142,10 @@ internal fun SettingsScreen(
             AppBackTopBar(
                 title = stringResource(R.string.settings_title),
                 onNavigateBack = onNavigateBack,
-                backContentDescription = stringResource(R.string.cd_navigate_back),
-                titleFontWeight = FontWeight.SemiBold
+                backContentDescription = stringResource(R.string.cd_navigate_back)
             )
         },
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -154,18 +160,16 @@ internal fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = dimensionResource(R.dimen.spacing_default))
-                    .padding(bottom = dimensionResource(R.dimen.spacing_xlarge))
+                    .padding(horizontal = AppSpacing.screen)
+                    .padding(bottom = AppSpacing.xlarge)
             ) {
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-
                 SettingsOverviewHeader(expenseCount = expenseCount)
 
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+                VSpace(AppSpacing.medium)
 
                 SettingsTipBanner()
 
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
+                VSpace(AppSpacing.xlarge)
 
                 SettingsSection(title = stringResource(R.string.settings_appearance_section)) {
                     SettingsGroupCard {
@@ -356,65 +360,43 @@ internal fun SettingsScreen(
     }
 }
 
+/** Hero for Settings: the size of the user's data, on the brand gradient. */
 @Composable
 private fun SettingsOverviewHeader(expenseCount: Int) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        )
-    ) {
+    val appColors = MaterialTheme.appColors
+    HeroGradientCard {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_xlarge)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_default))
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Column(modifier = Modifier.weight(1f)) {
+                OverlineText(
+                    text = stringResource(R.string.settings_backup_section),
+                    color = appColors.onHeroMuted
+                )
+                VSpace(AppSpacing.small)
+                AmountText(
+                    text = expenseCount.toString(),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = appColors.onHero
+                )
+                VSpace(2.dp)
+                Text(
+                    text = stringResource(R.string.settings_backup_expense_count, expenseCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = appColors.onHeroMuted
+                )
+            }
             Surface(
-                modifier = Modifier.size(dimensionResource(R.dimen.icon_size_large)),
+                modifier = Modifier.size(52.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary
+                color = appColors.onHero.copy(alpha = 0.18f)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_upload),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(dimensionResource(R.dimen.spacing_medium))
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.settings_backup_section),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_tiny)))
-                Text(
-                    text = stringResource(R.string.settings_backup_expense_count, expenseCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Text(
-                    text = expenseCount.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(
-                        horizontal = dimensionResource(R.dimen.spacing_medium),
-                        vertical = dimensionResource(R.dimen.spacing_small)
-                    )
+                    tint = appColors.onHero,
+                    modifier = Modifier.padding(AppSpacing.default)
                 )
             }
         }
@@ -425,26 +407,24 @@ private fun SettingsOverviewHeader(expenseCount: Int) {
 private fun SettingsTipBanner() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        shape = AppRadius.card,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(dimensionResource(R.dimen.spacing_default)),
+            modifier = Modifier.padding(AppSpacing.default),
             verticalAlignment = Alignment.Top
         ) {
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .padding(top = 2.dp)
+                modifier = Modifier.size(18.dp)
             )
             Text(
                 text = stringResource(R.string.settings_backup_info),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_small))
+                modifier = Modifier.padding(start = AppSpacing.medium)
             )
         }
     }

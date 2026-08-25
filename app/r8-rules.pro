@@ -42,6 +42,10 @@
 -keep class com.example.expancemanager.util.SecureKeyGenerator { *; }
 -keep class com.example.expancemanager.data.** { *; }
 
+# Gson maps backup JSON by field name. Keep the payload type; entities are already
+# covered by data.** above.
+-keep class com.example.expancemanager.util.BackupManager$BackupData { *; }
+
 # ============================================================================
 # Kotlin Coroutines
 # ============================================================================

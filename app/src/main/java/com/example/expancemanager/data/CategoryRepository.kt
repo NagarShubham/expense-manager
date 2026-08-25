@@ -1,6 +1,7 @@
 package com.example.expancemanager.data
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Single entry point for category data. Wraps [CategoryDao] and, for renames,
@@ -27,7 +28,8 @@ internal class CategoryRepository(
         data object InUse : CategoryResult
     }
 
-    internal fun getCategories(): Flow<List<Category>> = categoryDao.getAllOrdered()
+    internal fun getCategories(): Flow<List<Category>> =
+        categoryDao.getAllOrdered().distinctUntilChanged()
 
     internal suspend fun addCategory(
         name: String,

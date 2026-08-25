@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.expancemanager.ui.theme.AppRadius
 import com.example.expancemanager.util.EmojiData
 import kotlinx.coroutines.launch
 
@@ -75,12 +76,16 @@ internal fun EmojiPickerBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = AppRadius.hero,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             ScrollableTabRow(
                 selectedTabIndex = selectedTab,
-                edgePadding = 12.dp
+                edgePadding = AppSpacing.medium,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                contentColor = MaterialTheme.colorScheme.primary
             ) {
                 groups.forEachIndexed { index, group ->
                     Tab(
@@ -92,6 +97,7 @@ internal fun EmojiPickerBottomSheet(
                         text = {
                             Text(
                                 text = group.title,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
                             )
                         }
@@ -108,7 +114,10 @@ internal fun EmojiPickerBottomSheet(
                     .padding(horizontal = 8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(flatEmojis) { emoji ->
+                itemsIndexed(
+                    items = flatEmojis,
+                    key = { index, emoji -> "$index-$emoji" }
+                ) { _, emoji ->
                     Box(
                         modifier = Modifier
                             .aspectRatio(1f)

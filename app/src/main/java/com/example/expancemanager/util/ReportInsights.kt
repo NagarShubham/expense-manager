@@ -1,8 +1,10 @@
 package com.example.expancemanager.util
 
+import androidx.compose.runtime.Immutable
 import com.example.expancemanager.data.CategoryTotal
 import com.example.expancemanager.data.MonthlyTotal
 
+@Immutable
 internal data class PeriodSpendingReport(
     val totalSpending: Double,
     val monthlyAverage: Double,

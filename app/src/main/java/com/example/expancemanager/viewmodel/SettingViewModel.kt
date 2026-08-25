@@ -20,10 +20,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -39,8 +38,10 @@ internal class SettingViewModel
         private val transactionRunner: TransactionRunner,
         private val biometricAuthenticator: BiometricAuthenticator
     ) : ViewModel() {
-        private val _expenseCount = MutableStateFlow(0)
-        internal val expenseCount: StateFlow<Int> = _expenseCount.asStateFlow()
+
+        internal val expenseCount: StateFlow<Int> = expenseRepository
+            .getExpenseCount()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
         internal val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
         internal val isBiometricLockEnabled: StateFlow<Boolean> = preferenceRepository.isBiometricLockEnabled
         internal val isBiometricAvailable: Boolean = biometricAuthenticator.canAuthenticate()
@@ -53,11 +54,7 @@ internal class SettingViewModel
             val categories: List<Category>
         )
 
-        init {
-            viewModelScope.launch(Dispatchers.IO) {
-                expenseRepository.getExpenseCount().collect { _expenseCount.value = it }
-            }
-        }
+
 
         /**
          * Exports expenses, budgets, and budget exclusions to a JSON file.

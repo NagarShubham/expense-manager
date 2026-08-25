@@ -25,6 +25,8 @@ internal data class AllCategoriesRoute(
     val year: Int
 ) : AppRoute
 
+internal data object SearchRoute : AppRoute
+
 internal data object ReportsRoute : AppRoute
 
 internal data object SettingsRoute : AppRoute
