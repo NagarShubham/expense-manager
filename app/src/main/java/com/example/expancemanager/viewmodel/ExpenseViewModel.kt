@@ -61,8 +61,6 @@ internal class ExpenseViewModel
         private val budgetRepository: BudgetRepository,
         private val categoryRepository: CategoryRepository
     ) : ViewModel() {
-
-
         /** Single source of truth for which month/year to load; one collector reacts to this. */
         private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
@@ -107,16 +105,14 @@ internal class ExpenseViewModel
             }
         }
 
+    internal fun loadExpensesForMonth(
+        month: Int,
+        year: Int
+    ) {
+        selectedMonthYearFlow.value = month to year
+    }
 
-
-        internal fun loadExpensesForMonth(
-            month: Int,
-            year: Int
-        ) {
-            selectedMonthYearFlow.value = month to year
-        }
-
-        internal fun insertExpense(expense: Expense) {
+    internal fun insertExpense(expense: Expense) {
             viewModelScope.launch(Dispatchers.IO) {
                 expenseRepository.insertExpense(expense)
             }
@@ -145,10 +141,11 @@ internal class ExpenseViewModel
             loadExpensesForMonth(newMonth, newYear)
         }
 
-        internal fun goToCurrentMonth() {
-            val (month, year) = DateUtils.currentMonthYear()
-            loadExpensesForMonth(month, year)
-        }
+    internal fun goToCurrentMonth() {
+        val (month, year) = DateUtils.currentMonthYear()
+        loadExpensesForMonth(month, year)
+    }
+
     private companion object {
         fun buildUiState(
             expenses: List<Expense>,

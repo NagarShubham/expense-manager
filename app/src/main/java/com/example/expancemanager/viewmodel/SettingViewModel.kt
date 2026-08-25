@@ -38,7 +38,6 @@ internal class SettingViewModel
         private val transactionRunner: TransactionRunner,
         private val biometricAuthenticator: BiometricAuthenticator
     ) : ViewModel() {
-
         internal val expenseCount: StateFlow<Int> = expenseRepository
             .getExpenseCount()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -53,8 +52,6 @@ internal class SettingViewModel
             val budgetExcludedCategories: List<BudgetExcludedCategory>,
             val categories: List<Category>
         )
-
-
 
         /**
          * Exports expenses, budgets, and budget exclusions to a JSON file.
