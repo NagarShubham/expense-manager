@@ -50,6 +50,7 @@ import com.example.expancemanager.util.BiometricAuthenticator
  */
 internal interface BiometricLockHandle {
     fun beginExternalFlow()
+
     fun endExternalFlow()
 }
 

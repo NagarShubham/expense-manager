@@ -1,5 +1,6 @@
 package com.example.expancemanager.ui.screen
 
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -42,7 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -76,6 +77,7 @@ internal fun SettingsScreen(
     onNavigateToReports: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val expenseCount by viewModel.expenseCount.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
@@ -102,9 +104,17 @@ internal fun SettingsScreen(
                     isLoading = false
 
                     if (result.isSuccess) {
-                        context.showToast(result.getOrNull() ?: context.getString(R.string.settings_export_success_default))
+                        context.showToast(
+                            result.getOrNull()
+                                ?: resources.getString(R.string.settings_export_success_default)
+                        )
                     } else {
-                        context.showToast(context.getString(R.string.settings_export_failed, result.exceptionOrNull()?.message.orEmpty()))
+                        context.showToast(
+                            resources.getString(
+                                R.string.settings_export_failed,
+                                result.exceptionOrNull()?.message.orEmpty()
+                            )
+                        )
                     }
                 }
             }
@@ -168,8 +178,11 @@ internal fun SettingsScreen(
                             iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                             title = stringResource(R.string.settings_dark_theme_title),
                             subtitle = stringResource(
-                                if (isDarkTheme) R.string.settings_dark_theme_on
-                                else R.string.settings_dark_theme_off
+                                if (isDarkTheme) {
+                                    R.string.settings_dark_theme_on
+                                } else {
+                                    R.string.settings_dark_theme_off
+                                }
                             ),
                             checked = isDarkTheme,
                             onCheckedChange = viewModel::setDarkTheme,
@@ -199,7 +212,7 @@ internal fun SettingsScreen(
                                         viewModel.requestEnableBiometricLock(
                                             activity = it,
                                             onEnabled = {
-                                                context.showToast(context.getString(R.string.biometric_enabled))
+                                                context.showToast(resources.getString(R.string.biometric_enabled))
                                             },
                                             onFailed = { message ->
                                                 context.showToast(message)
@@ -326,7 +339,7 @@ internal fun SettingsScreen(
                     if (result.isSuccess) {
                         val imported = result.getOrNull()
                         context.showToast(
-                            context.getString(
+                            resources.getString(
                                 R.string.settings_import_success,
                                 imported?.expenses?.size ?: 0,
                                 imported?.monthlyBudgets?.size ?: 0,
@@ -334,7 +347,12 @@ internal fun SettingsScreen(
                             )
                         )
                     } else {
-                        context.showToast(context.getString(R.string.settings_import_failed, result.exceptionOrNull()?.message.orEmpty()))
+                        context.showToast(
+                            resources.getString(
+                                R.string.settings_import_failed,
+                                result.exceptionOrNull()?.message.orEmpty()
+                            )
+                        )
                     }
                 }
             }

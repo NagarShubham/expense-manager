@@ -27,7 +27,7 @@
     <string name="home_total_spent">Total spent</string>
     <string name="home_category_breakdown">Category Breakdown</string>
     <string name="home_top_categories">Top categories</string>
-    <string name="home_recent_transactions">Recent transactions</string>
+    <string name="home_recent_transactions">Recent transactions (%d)</string>
     <string name="home_view_all_categories">View All %d Categories</string>
     <string name="home_view_all">View all</string>
     <string name="home_transactions_count">%d transactions this month</string>
@@ -199,5 +199,41 @@
     <string name="settings_insights_section">Insights</string>
     <string name="settings_reports_title">Spending insights</string>
     <string name="settings_reports_subtitle">See totals, monthly average, and category spend for a time range.</string>
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="cd_search">Search expenses</string>
+    <string name="search_field_hint">Search expenses</string>
+    <string name="cd_clear_search">Clear search</string>
+    <string name="cd_open_filters">Filters</string>
+    <string name="search_result_count_singular">1 result</string>
+    <string name="search_result_count">%1$d results</string>
+    <string name="search_result_total">%1$s total</string>
+    <string name="search_truncated">Showing the first %1$d matches. Narrow your filters to see the rest.</string>
+    <string name="search_start_emoji">🔍</string>
+    <string name="search_start_title">Search your history</string>
+    <string name="search_start_subtitle">Find any expense by name, amount, category, or date — across every month.</string>
+    <string name="search_empty_emoji">🗒️</string>
+    <string name="search_empty_title">No matches</string>
+    <string name="search_empty_subtitle">Try a different search or loosen your filters.</string>
+
+    <!-- Filter sheet -->
+    <string name="filter_sheet_title">Filter &amp; sort</string>
+    <string name="filter_sort_section">Sort by</string>
+    <string name="filter_sort_date_desc">Newest first</string>
+    <string name="filter_sort_date_asc">Oldest first</string>
+    <string name="filter_sort_amount_desc">Highest amount</string>
+    <string name="filter_sort_amount_asc">Lowest amount</string>
+    <string name="filter_category_section">Categories</string>
+    <string name="filter_category_all">All categories</string>
+    <string name="filter_amount_section">Amount range</string>
+    <string name="filter_amount_min">Min</string>
+    <string name="filter_amount_max">Max</string>
+    <string name="filter_date_section">Date range</string>
+    <string name="filter_date_any">Any date</string>
+    <string name="filter_date_pick">Select dates</string>
+    <string name="filter_date_range_title">Select date range</string>
+    <string name="filter_apply">Show results</string>
+    <string name="filter_reset">Reset</string>
+    <string name="filter_amount_invalid">Min can\'t be greater than max</string>
 
 </resources>

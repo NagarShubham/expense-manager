@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -75,6 +76,7 @@ internal fun HomeScreen(
     onExpenseClick: (Long) -> Unit = {},
     onCategoryClick: (String, Int, Int) -> Unit = { _, _, _ -> },
     onShowAllCategoriesClick: (Int, Int) -> Unit = { _, _ -> },
+    onSearchClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -109,6 +111,7 @@ internal fun HomeScreen(
                     onPreviousMonth = { viewModel.changeMonth(-1) },
                     onNextMonth = { viewModel.changeMonth(1) },
                     onMonthYearClick = { viewModel.goToCurrentMonth() },
+                    onSearchClick = onSearchClick,
                     onSettingsClick = onSettingsClick
                 )
             }
@@ -163,7 +166,7 @@ internal fun HomeScreen(
                     contentType = HomeContentType.HEADER
                 ) {
                     VSpace(AppSpacing.small)
-                    SectionHeader(title = stringResource(R.string.home_recent_transactions))
+                    SectionHeader(title = stringResource(R.string.home_recent_transactions,uiState.expenses.size))
                 }
 
                 items(
@@ -192,6 +195,7 @@ private fun MonthSelector(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onMonthYearClick: () -> Unit = {},
+    onSearchClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null
 ) {
     val formattedMonthYear = remember(month, year) { DateUtils.formatMonthYear(month, year) }
@@ -251,6 +255,19 @@ private fun MonthSelector(
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp)
                 )
+            }
+            if (onSearchClick != null) {
+                CircleIconButton(
+                    onClick = onSearchClick,
+                    contentDescription = stringResource(R.string.cd_search)
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = stringResource(R.string.cd_search),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             if (onSettingsClick != null) {
                 CircleIconButton(

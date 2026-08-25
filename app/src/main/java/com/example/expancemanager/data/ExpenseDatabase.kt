@@ -193,6 +193,5 @@ internal abstract class ExpenseDatabase : RoomDatabase() {
                         .also { INSTANCE = it }
                 }
             }
-
     }
 }

@@ -54,15 +54,17 @@ internal data class ExpenseUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-internal class ExpenseViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository,
-    private val budgetRepository: BudgetRepository,
-    private val categoryRepository: CategoryRepository
-) : ViewModel() {
-    /** Single source of truth for which month/year to load; one collector reacts to this. */
+internal class ExpenseViewModel
+    @Inject
+    constructor(
+        private val expenseRepository: ExpenseRepository,
+        private val budgetRepository: BudgetRepository,
+        private val categoryRepository: CategoryRepository
+    ) : ViewModel() {
+        /** Single source of truth for which month/year to load; one collector reacts to this. */
     private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
-    /**
+        /**
      * One expense-list query per month, then derive totals in memory. Avoids three Room
      * invalidations (list + SUM + GROUP BY) on every write to the expenses table.
      */
@@ -91,53 +93,53 @@ internal class ExpenseViewModel @Inject constructor(
 
     internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
 
-    /** Pushes a route onto the back stack. */
-    internal fun navigateTo(route: AppRoute) {
-        backStack.add(route)
-    }
-
-    /** Pops the current route; no-op if only the root (e.g. Home) remains. */
-    internal fun navigateBack() {
-        if (backStack.size > 1) {
-            backStack.removeAt(backStack.lastIndex)
+        /** Pushes a route onto the back stack. */
+        internal fun navigateTo(route: AppRoute) {
+            backStack.add(route)
         }
-    }
 
-    internal fun loadExpensesForMonth(
+        /** Pops the current route; no-op if only the root (e.g. Home) remains. */
+        internal fun navigateBack() {
+            if (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
+
+        internal fun loadExpensesForMonth(
         month: Int,
         year: Int
     ) {
         selectedMonthYearFlow.value = month to year
     }
 
-    internal fun insertExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.insertExpense(expense)
-        }
-    }
-
-    internal fun updateExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.updateExpense(expense)
-        }
-    }
-
-    internal fun deleteExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.deleteExpense(expense)
-        }
-    }
-
-    internal suspend fun getExpenseById(id: Long): Expense? =
-        withContext(Dispatchers.IO) {
-            expenseRepository.getExpenseById(id)
+        internal fun insertExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.insertExpense(expense)
+            }
         }
 
-    internal fun changeMonth(increment: Int) {
-        val (month, year) = selectedMonthYearFlow.value
-        val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
-        loadExpensesForMonth(newMonth, newYear)
-    }
+        internal fun updateExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.updateExpense(expense)
+            }
+        }
+
+        internal fun deleteExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.deleteExpense(expense)
+            }
+        }
+
+        internal suspend fun getExpenseById(id: Long): Expense? =
+            withContext(Dispatchers.IO) {
+                expenseRepository.getExpenseById(id)
+            }
+
+        internal fun changeMonth(increment: Int) {
+            val (month, year) = selectedMonthYearFlow.value
+            val (newMonth, newYear) = DateUtils.adjacentMonth(month, year, increment)
+            loadExpensesForMonth(newMonth, newYear)
+        }
 
     internal fun goToCurrentMonth() {
         val (month, year) = DateUtils.currentMonthYear()

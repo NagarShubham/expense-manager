@@ -23,6 +23,7 @@ import com.example.expancemanager.nav.ExpenseDetailRoute
 import com.example.expancemanager.nav.HomeScreenRoute
 import com.example.expancemanager.nav.ManageCategoriesRoute
 import com.example.expancemanager.nav.ReportsRoute
+import com.example.expancemanager.nav.SearchRoute
 import com.example.expancemanager.nav.SettingsRoute
 import com.example.expancemanager.ui.screen.AddEditExpenseScreen
 import com.example.expancemanager.ui.screen.AllCategoriesScreen
@@ -33,6 +34,7 @@ import com.example.expancemanager.ui.screen.ExpenseDetailScreen
 import com.example.expancemanager.ui.screen.HomeScreen
 import com.example.expancemanager.ui.screen.ManageCategoriesScreen
 import com.example.expancemanager.ui.screen.ReportsScreen
+import com.example.expancemanager.ui.screen.SearchScreen
 import com.example.expancemanager.ui.screen.SettingsScreen
 import com.example.expancemanager.ui.theme.ExpanseManagerTheme
 import com.example.expancemanager.util.BiometricAuthenticator
@@ -94,6 +96,7 @@ class MainActivity : ComponentActivity() {
                     onExpenseClick = { viewModel.navigateTo(ExpenseDetailRoute(it)) },
                     onCategoryClick = { c, m, y -> viewModel.navigateTo(CategoryExpensesRoute(c, m, y)) },
                     onShowAllCategoriesClick = { m, y -> viewModel.navigateTo(AllCategoriesRoute(m, y)) },
+                    onSearchClick = { viewModel.navigateTo(SearchRoute) },
                     onSettingsClick = { viewModel.navigateTo(SettingsRoute) }
                 )
             }
@@ -143,6 +146,13 @@ class MainActivity : ComponentActivity() {
                         viewModel.navigateBack()
                         viewModel.navigateTo(EditExpenseRoute(it))
                     }
+                )
+            }
+
+            entry<SearchRoute> {
+                SearchScreen(
+                    onNavigateBack = viewModel::navigateBack,
+                    onExpenseClick = { viewModel.navigateTo(ExpenseDetailRoute(it)) }
                 )
             }
 
