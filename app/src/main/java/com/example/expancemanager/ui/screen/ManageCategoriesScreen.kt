@@ -72,8 +72,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expancemanager.R
 import com.example.expancemanager.data.Category
 import com.example.expancemanager.data.CategoryRepository.CategoryResult
+import com.example.expancemanager.ui.components.AmountText
+import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppSpacing
+import com.example.expancemanager.ui.components.CategoryAvatar
 import com.example.expancemanager.ui.components.EmojiPickerBottomSheet
 import com.example.expancemanager.ui.components.EmptyStateMessage
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.SectionHeader
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.ExpenseCategories
 import com.example.expancemanager.util.showToast
 import com.example.expancemanager.viewmodel.CategoryViewModel
@@ -102,43 +110,22 @@ internal fun ManageCategoriesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.manage_categories_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = stringResource(R.string.manage_categories_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+            AppBackTopBar(
+                title = stringResource(R.string.manage_categories_title),
+                subtitle = stringResource(R.string.manage_categories_subtitle),
+                onNavigateBack = onNavigateBack
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { editingCategory = CategoryEditState.forNew() },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.manage_categories_add)) }
             )
         },
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         if (categories.isEmpty()) {
             Box(modifier = Modifier.padding(paddingValues)) {
@@ -153,17 +140,17 @@ internal fun ManageCategoriesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = dimensionResource(R.dimen.spacing_default)),
-                contentPadding = PaddingValues(vertical = dimensionResource(R.dimen.spacing_small))
+                    .padding(horizontal = AppSpacing.screen),
+                contentPadding = PaddingValues(bottom = AppSpacing.small)
             ) {
                 item(key = "header") {
                     CategoriesHeaderCard(categoryCount = categories.size)
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_xlarge)))
+                    Spacer(modifier = Modifier.height(AppSpacing.large))
                 }
 
                 item(key = "section_title") {
-                    CategoriesSectionTitle(
-                        text = stringResource(R.string.manage_categories_section_label)
+                    SectionHeader(
+                        title = stringResource(R.string.manage_categories_section_label)
                     )
                 }
 
@@ -280,7 +267,7 @@ private fun DraggableCategoryList(
                 OutlinedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp)
+                        .padding(vertical = AppSpacing.tiny)
                         .shadow(
                             elevation = elevation,
                             shape = ManageCategoriesShapes.sectionCard,
@@ -288,14 +275,16 @@ private fun DraggableCategoryList(
                         ),
                     shape = ManageCategoriesShapes.sectionCard,
                     colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                     ),
+                    // The border is the drag affordance: it lights up in the brand color
+                    // while a row is lifted, and is otherwise invisible.
                     border = BorderStroke(
                         width = 1.dp,
                         color = if (isDragged) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                            Color.Transparent
                         }
                     )
                 ) {
@@ -345,78 +334,42 @@ private fun DraggableCategoryList(
 
 @Composable
 private fun CategoriesHeaderCard(categoryCount: Int) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = ManageCategoriesShapes.headerCard,
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        )
-    ) {
+    val appColors = MaterialTheme.appColors
+    HeroGradientCard {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_xlarge)),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_default))
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.default)
         ) {
+            Column(modifier = Modifier.weight(1f)) {
+                OverlineText(
+                    text = stringResource(R.string.manage_categories_header_title),
+                    color = appColors.onHeroMuted
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.small))
+                AmountText(
+                    text = categoryCount.toString(),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = appColors.onHero
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.manage_categories_header_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = appColors.onHeroMuted
+                )
+            }
             Surface(
-                modifier = Modifier.size(dimensionResource(R.dimen.icon_size_large)),
-                shape = ManageCategoriesShapes.headerCard,
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(52.dp),
+                shape = ManageCategoriesShapes.emojiIcon,
+                color = appColors.onHero.copy(alpha = 0.18f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(text = "🏷️", fontSize = 24.sp)
                 }
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.manage_categories_header_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_tiny)))
-                Text(
-                    text = stringResource(R.string.manage_categories_header_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Surface(
-                shape = ManageCategoriesShapes.emojiIcon,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Text(
-                    text = categoryCount.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(
-                        horizontal = dimensionResource(R.dimen.spacing_medium),
-                        vertical = dimensionResource(R.dimen.spacing_small)
-                    )
-                )
-            }
         }
     }
-}
-
-@Composable
-private fun CategoriesSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(
-            start = dimensionResource(R.dimen.spacing_tiny),
-            bottom = dimensionResource(R.dimen.spacing_small)
-        )
-    )
 }
 
 @Composable
@@ -442,23 +395,20 @@ private fun CategoryRow(
         leadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_small))
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = stringResource(R.string.manage_categories_reorder),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = dragModifier.size(20.dp)
                 )
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = ManageCategoriesShapes.emojiIcon,
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(text = category.emoji, fontSize = 18.sp)
-                    }
-                }
+                CategoryAvatar(
+                    emoji = category.emoji,
+                    accent = MaterialTheme.appColors.accentFor(category.name),
+                    size = 40.dp,
+                    emojiSize = 18.dp
+                )
             }
         },
         trailingContent = {
@@ -536,7 +486,7 @@ private fun CategoryEditDialog(
                             .size(56.dp)
                             .clickable { showEmojiPicker = true },
                         shape = ManageCategoriesShapes.emojiIcon,
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(text = emoji, fontSize = 28.sp)

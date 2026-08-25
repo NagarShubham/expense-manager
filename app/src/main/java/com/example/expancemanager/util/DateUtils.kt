@@ -10,9 +10,13 @@ import java.util.Locale
 import java.util.TimeZone
 
 internal object DateUtils {
+    private val utcTimeZone: TimeZone = TimeZone.getTimeZone("UTC")
+    private val localCalendar = ThreadLocal.withInitial { Calendar.getInstance() }
+    private val utcCalendar = ThreadLocal.withInitial { Calendar.getInstance(utcTimeZone) }
+
     /** Returns the current (month, year) as a 0-based month and full year. */
     internal fun currentMonthYear(): Pair<Int, Int> =
-        Calendar.getInstance().run { get(Calendar.MONTH) to get(Calendar.YEAR) }
+        localCalendar.get()!!.run { timeInMillis = System.currentTimeMillis(); get(Calendar.MONTH) to get(Calendar.YEAR) }
 
     /**
      * Returns (month, year) for the month that is [increment] months from the given month/year.
@@ -23,10 +27,10 @@ internal object DateUtils {
         year: Int,
         increment: Int
     ): Pair<Int, Int> {
-        val calendar = Calendar.getInstance().apply {
-            set(year, month, 1)
-            add(Calendar.MONTH, increment)
-        }
+        val calendar = localCalendar.get()!!
+        calendar.clear()
+        calendar.set(year, month, 1)
+        calendar.add(Calendar.MONTH, increment)
         return calendar.get(Calendar.MONTH) to calendar.get(Calendar.YEAR)
     }
 
@@ -47,10 +51,10 @@ internal object DateUtils {
         month: Int,
         year: Int
     ): String {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.MONTH, month)
-            set(Calendar.YEAR, year)
-        }
+        val calendar = localCalendar.get()!!
+        calendar.timeInMillis = System.currentTimeMillis()
+        calendar.set(Calendar.MONTH, month)
+        calendar.set(Calendar.YEAR, year)
         return monthYearFormat.get()!!.format(calendar.time)
     }
 
@@ -87,7 +91,8 @@ internal object DateUtils {
     }
 
     internal fun yearMonthFrom(timestamp: Long): YearMonth {
-        val calendar = Calendar.getInstance().apply { timeInMillis = timestamp }
+        val calendar = localCalendar.get()!!
+        calendar.timeInMillis = timestamp
         return YearMonth(month = calendar.get(Calendar.MONTH), year = calendar.get(Calendar.YEAR))
     }
 
@@ -102,30 +107,33 @@ internal object DateUtils {
         utcPickerDateToLocal(utcMillis, hour = 23, minute = 59, second = 59, millisecond = 999)
 
     internal fun localMillisToUtcPickerDate(localMillis: Long): Long {
-        val local = Calendar.getInstance().apply { timeInMillis = localMillis }
-        return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-            set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        val local = localCalendar.get()!!
+        local.timeInMillis = localMillis
+        val year = local.get(Calendar.YEAR)
+        val month = local.get(Calendar.MONTH)
+        val day = local.get(Calendar.DAY_OF_MONTH)
+        val utc = utcCalendar.get()!!
+        utc.clear()
+        utc.set(year, month, day, 0, 0, 0)
+        utc.set(Calendar.MILLISECOND, 0)
+        return utc.timeInMillis
     }
 
     internal fun getMonthDateRange(
         month: Int,
         year: Int
     ): Pair<Long, Long> {
-        val calendar = Calendar.getInstance().apply {
-            set(year, month, 1, 0, 0, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val calendar = localCalendar.get()!!
+        calendar.clear()
+        calendar.set(year, month, 1, 0, 0, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         val startDate = calendar.timeInMillis
 
-        calendar.apply {
-            set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59)
-            set(Calendar.MILLISECOND, 999)
-        }
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
         val endDate = calendar.timeInMillis
 
         return Pair(startDate, endDate)
@@ -138,17 +146,15 @@ internal object DateUtils {
         second: Int,
         millisecond: Int
     ): Long {
-        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMillis }
-        return Calendar.getInstance().apply {
-            set(
-                utc.get(Calendar.YEAR),
-                utc.get(Calendar.MONTH),
-                utc.get(Calendar.DAY_OF_MONTH),
-                hour,
-                minute,
-                second
-            )
-            set(Calendar.MILLISECOND, millisecond)
-        }.timeInMillis
+        val utc = utcCalendar.get()!!
+        utc.timeInMillis = utcMillis
+        val year = utc.get(Calendar.YEAR)
+        val month = utc.get(Calendar.MONTH)
+        val day = utc.get(Calendar.DAY_OF_MONTH)
+        val local = localCalendar.get()!!
+        local.clear()
+        local.set(year, month, day, hour, minute, second)
+        local.set(Calendar.MILLISECOND, millisecond)
+        return local.timeInMillis
     }
 }

@@ -3,25 +3,25 @@ package com.example.expancemanager.ui.screen
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import com.example.expancemanager.R
 import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppSpacing
 import com.example.expancemanager.ui.components.CategoryTotalCard
 import com.example.expancemanager.ui.components.EmptyStateMessage
 import com.example.expancemanager.ui.components.PeriodSummaryHeader
+import com.example.expancemanager.ui.components.SectionHeader
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.viewmodel.ExpenseViewModel
 
@@ -35,20 +35,16 @@ internal fun AllCategoriesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Calculate total amount
-    val totalAmount = remember(uiState.categoryTotals) {
-        uiState.categoryTotals.sumOf { it.total }
-    }
+    val totalAmount = uiState.totalAmount
     val formattedTotal = remember(totalAmount) { DateUtils.formatAmount(totalAmount) }
     val monthLabel = remember(month, year) { DateUtils.formatMonthYear(month, year) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AppBackTopBar(
                 title = stringResource(R.string.categories_all_title),
-                onNavigateBack = onNavigateBack,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                onNavigateBack = onNavigateBack
             )
         }
     ) { paddingValues ->
@@ -64,9 +60,7 @@ internal fun AllCategoriesScreen(
                     stringResource(R.string.categories_count_singular, uiState.categoryTotals.size)
                 } else {
                     stringResource(R.string.categories_count_plural, uiState.categoryTotals.size)
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                }
             )
 
             if (uiState.categoryTotals.isEmpty()) {
@@ -79,15 +73,13 @@ internal fun AllCategoriesScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = dimensionResource(R.dimen.spacing_default)),
-                    contentPadding = PaddingValues(vertical = dimensionResource(R.dimen.spacing_small))
+                        .padding(horizontal = AppSpacing.screen),
+                    contentPadding = PaddingValues(bottom = AppSpacing.xlarge)
                 ) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.categories_all_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = dimensionResource(R.dimen.spacing_small))
+                    item(key = "section_header") {
+                        SectionHeader(
+                            title = stringResource(R.string.categories_all_title),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 

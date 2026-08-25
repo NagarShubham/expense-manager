@@ -1,29 +1,28 @@
 package com.example.expancemanager.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
@@ -35,19 +34,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expancemanager.R
-import com.example.expancemanager.data.CategoryTotal
 import com.example.expancemanager.data.MonthlyTotal
+import com.example.expancemanager.ui.components.AmountText
 import com.example.expancemanager.ui.components.AppBackTopBar
+import com.example.expancemanager.ui.components.AppCard
+import com.example.expancemanager.ui.components.AppSpacing
 import com.example.expancemanager.ui.components.CategoryTotalCard
 import com.example.expancemanager.ui.components.EmptyStateMessage
+import com.example.expancemanager.ui.components.HSpace
+import com.example.expancemanager.ui.components.HeroAmountText
+import com.example.expancemanager.ui.components.HeroGradientCard
+import com.example.expancemanager.ui.components.MetricTile
+import com.example.expancemanager.ui.components.OverlineText
+import com.example.expancemanager.ui.components.SectionHeader
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.DateUtils
 import com.example.expancemanager.util.ReportPeriodKind
 import com.example.expancemanager.viewmodel.ReportsViewModel
@@ -64,9 +74,11 @@ internal fun ReportsScreen(
     var showDateRangePicker by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AppBackTopBar(
                 title = stringResource(R.string.reports_title),
+                subtitle = uiState.rangeLabel.takeIf { it.isNotBlank() },
                 onNavigateBack = onNavigateBack
             )
         }
@@ -124,52 +136,56 @@ internal fun ReportsScreen(
                 }
 
                 else -> {
-                    Column(
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(
-                                horizontal = dimensionResource(R.dimen.spacing_default),
-                                vertical = dimensionResource(R.dimen.spacing_small)
-                            ),
-                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_default))
+                            .padding(horizontal = AppSpacing.screen),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            bottom = AppSpacing.xlarge
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                     ) {
-                        if (uiState.rangeLabel.isNotBlank()) {
-                            Text(
-                                text = uiState.rangeLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        item(key = "total_card") {
+                            TotalSpendingCard(
+                                total = report.totalSpending,
+                                monthlyAverage = report.monthlyAverage
                             )
                         }
 
-                        TotalSpendingCard(
-                            total = report.totalSpending,
-                            monthlyAverage = report.monthlyAverage
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_small))
-                        ) {
-                            ExtremeMonthCard(
-                                title = stringResource(R.string.reports_highest_month),
-                                month = report.highestMonth,
-                                amountColor = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.weight(1f)
-                            )
-                            ExtremeMonthCard(
-                                title = stringResource(R.string.reports_lowest_month),
-                                month = report.lowestMonth,
-                                amountColor = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.weight(1f)
-                            )
+                        item(key = "extreme_months") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+                            ) {
+                                ExtremeMonthTile(
+                                    title = stringResource(R.string.reports_highest_month),
+                                    month = report.highestMonth,
+                                    amountColor = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ExtremeMonthTile(
+                                    title = stringResource(R.string.reports_lowest_month),
+                                    month = report.lowestMonth,
+                                    amountColor = MaterialTheme.appColors.positive,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
 
-                        CategoryBreakdownCard(
-                            totals = report.categoryTotals,
-                            periodTotal = report.totalSpending,
-                            emojiMap = uiState.categoryEmojiMap
-                        )
+                        item(key = "category_header") {
+                            SectionHeader(title = stringResource(R.string.reports_top_categories))
+                        }
+
+                        items(
+                            items = report.categoryTotals,
+                            key = { it.category }
+                        ) { item ->
+                            CategoryTotalCard(
+                                categoryTotal = item,
+                                totalAmount = report.totalSpending,
+                                emojiMap = uiState.categoryEmojiMap
+                            )
+                        }
                     }
                 }
             }
@@ -183,6 +199,10 @@ private val REPORT_PERIOD_CHIPS = listOf(
     ReportPeriodKind.CUSTOM to R.string.reports_period_custom
 )
 
+/**
+ * Period filter as a row of pill toggles rather than Material FilterChips — the
+ * selected pill is a solid brand fill, which reads faster than a checkmark.
+ */
 @Composable
 private fun PeriodSelectorRow(
     selected: ReportPeriodKind,
@@ -192,18 +212,39 @@ private fun PeriodSelectorRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(
-                horizontal = dimensionResource(R.dimen.spacing_default),
-                vertical = dimensionResource(R.dimen.spacing_small)
-            ),
-        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_small))
+            .padding(horizontal = AppSpacing.screen, vertical = AppSpacing.small),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
     ) {
         REPORT_PERIOD_CHIPS.forEach { (kind, labelRes) ->
-            FilterChip(
-                selected = selected == kind,
-                onClick = { onSelect(kind) },
-                label = { Text(stringResource(labelRes)) }
-            )
+            val isSelected = selected == kind
+            val label = stringResource(labelRes)
+            Surface(
+                shape = AppRadius.pill,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                modifier = Modifier.clickable(
+                    role = Role.RadioButton,
+                    onClickLabel = label,
+                    onClick = { onSelect(kind) }
+                )
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(
+                        horizontal = AppSpacing.default,
+                        vertical = AppSpacing.small + 2.dp
+                    )
+                )
+            }
         }
     }
 }
@@ -220,24 +261,30 @@ private fun CustomRangeCalendarButton(
     val endLabel = remember(endMillis) {
         DateUtils.formatDate(DateUtils.utcPickerDateToLocalEnd(endMillis))
     }
-    OutlinedCard(
+    AppCard(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = dimensionResource(R.dimen.spacing_default))
-            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = AppSpacing.screen)
+            .padding(bottom = AppSpacing.small),
+        onClick = onClick,
+        contentPadding = AppSpacing.default
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_default)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_medium))
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = stringResource(R.string.reports_custom_pick),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Surface(
+                shape = AppRadius.icon,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = stringResource(R.string.reports_custom_pick),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(AppSpacing.small)
+                )
+            }
+            HSpace(AppSpacing.medium)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.reports_custom_hint),
@@ -247,7 +294,8 @@ private fun CustomRangeCalendarButton(
                 Text(
                     text = "$startLabel – $endLabel",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -294,7 +342,7 @@ private fun CustomDateRangePickerDialog(
             title = {
                 Text(
                     text = stringResource(R.string.reports_date_range_title),
-                    modifier = Modifier.padding(dimensionResource(R.dimen.spacing_default))
+                    modifier = Modifier.padding(AppSpacing.default)
                 )
             },
             showModeToggle = false
@@ -309,47 +357,45 @@ private fun TotalSpendingCard(
 ) {
     val formattedTotal = remember(total) { DateUtils.formatAmount(total) }
     val formattedAverage = remember(monthlyAverage) { DateUtils.formatAmount(monthlyAverage) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+    val appColors = MaterialTheme.appColors
+
+    HeroGradientCard {
+        OverlineText(
+            text = stringResource(R.string.reports_total_spending),
+            color = appColors.onHeroMuted
         )
-    ) {
-        Column(
+        VSpace(AppSpacing.small)
+        HeroAmountText(
+            text = formattedTotal,
+            style = MaterialTheme.typography.displaySmall,
+            color = appColors.onHero
+        )
+        VSpace(AppSpacing.large)
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.spacing_xlarge))
+                .clip(AppRadius.chip)
+                .background(appColors.onHero.copy(alpha = 0.14f))
+                .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.reports_total_spending),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_tiny)))
-            Text(
-                text = formattedTotal,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_medium)))
             Text(
                 text = stringResource(R.string.reports_monthly_average),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                color = appColors.onHeroMuted
             )
-            Text(
+            AmountText(
                 text = formattedAverage,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                style = MaterialTheme.typography.titleMedium,
+                color = appColors.onHero
             )
         }
     }
 }
 
 @Composable
-private fun ExtremeMonthCard(
+private fun ExtremeMonthTile(
     title: String,
     month: MonthlyTotal?,
     amountColor: Color,
@@ -361,60 +407,11 @@ private fun ExtremeMonthCard(
     val formattedAmount = remember(month?.total) {
         month?.let { DateUtils.formatAmount(it.total) }
     }
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(modifier = Modifier.padding(dimensionResource(R.dimen.spacing_default))) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-            if (month == null) {
-                Text(
-                    text = stringResource(R.string.reports_stat_unavailable),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                Text(
-                    text = formattedMonth.orEmpty(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = formattedAmount.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = amountColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CategoryBreakdownCard(
-    totals: List<CategoryTotal>,
-    periodTotal: Double,
-    emojiMap: Map<String, String>,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.reports_top_categories),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = dimensionResource(R.dimen.spacing_small))
-        )
-        totals.forEach { item ->
-            CategoryTotalCard(
-                categoryTotal = item,
-                totalAmount = periodTotal,
-                emojiMap = emojiMap,
-            )
-        }
-    }
+    MetricTile(
+        label = title,
+        value = formattedAmount ?: stringResource(R.string.reports_stat_unavailable),
+        valueColor = if (month == null) MaterialTheme.colorScheme.onSurfaceVariant else amountColor,
+        footnote = formattedMonth,
+        modifier = modifier
+    )
 }
