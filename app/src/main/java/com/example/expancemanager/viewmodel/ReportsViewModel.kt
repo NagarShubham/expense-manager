@@ -65,9 +65,8 @@ internal class ReportsViewModel
     ) : ViewModel() {
         private val selectionFlow = MutableStateFlow(ReportPeriodSelection())
 
-            internal val uiState: StateFlow<ReportsUiState> =
-        selectionFlow
-            .flatMapLatest { selection ->
+        internal val uiState: StateFlow<ReportsUiState> =
+            selectionFlow.flatMapLatest { selection ->
                 val resolved = ReportPeriodResolver.resolve(
                     kind = selection.kind,
                     customStartMillis = selection.customStartMillis,
@@ -87,26 +86,26 @@ internal class ReportsViewModel
                         expenseRepository.getCategoryTotalsByDateRange(resolved.startMillis, resolved.endMillis),
                         expenseRepository.getMonthlyTotalsByDateRange(resolved.startMillis, resolved.endMillis),
                         categoryRepository.getCategories()
-                        ) { total, categories, monthly, categoryList ->
-                            ReportsUiState(
-                                selection = selection,
-                                rangeLabel = rangeLabel(selection.kind, resolved),
-                                periodEndMonth = resolved.end.month,
-                                periodEndYear = resolved.end.year,
-                                isRangeInvalid = false,
-                                report = ReportInsights.buildPeriodReport(
-                                    totalSpending = total ?: 0.0,
-                                    monthlyTotals = monthly,
-                                    categoryTotals = categories,
-                                    monthsInRange = resolved.months
-                                ),
+                    ) { total, categories, monthly, categoryList ->
+                        ReportsUiState(
+                            selection = selection,
+                            rangeLabel = rangeLabel(selection.kind, resolved),
+                            periodEndMonth = resolved.end.month,
+                            periodEndYear = resolved.end.year,
+                            isRangeInvalid = false,
+                            report = ReportInsights.buildPeriodReport(
+                                totalSpending = total ?: 0.0,
+                                monthlyTotals = monthly,
+                                categoryTotals = categories,
+                                monthsInRange = resolved.months
+                            ),
                             categories = categoryList
                         )
                     }
-                    }
                 }
-            .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
+            }
+                .distinctUntilChanged()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
 
         internal fun selectPeriod(kind: ReportPeriodKind) {
             selectionFlow.update { it.copy(kind = kind) }

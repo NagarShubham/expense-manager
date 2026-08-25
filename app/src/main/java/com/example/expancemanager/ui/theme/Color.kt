@@ -124,7 +124,7 @@ internal val LightCategoryAccents = listOf(
     Color(0xFFE87BA4), // magenta
     Color(0xFF008300), // green
     Color(0xFF4A3AA7), // violet
-    Color(0xFFE34948)  // red
+    Color(0xFFE34948) // red
 )
 
 internal val DarkCategoryAccents = listOf(
@@ -135,5 +135,5 @@ internal val DarkCategoryAccents = listOf(
     Color(0xFFD55181), // magenta
     Color(0xFF008300), // green
     Color(0xFF9085E9), // violet
-    Color(0xFFE66767)  // red
+    Color(0xFFE66767) // red
 )

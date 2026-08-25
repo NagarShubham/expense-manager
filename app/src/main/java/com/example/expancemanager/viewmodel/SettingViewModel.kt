@@ -38,8 +38,7 @@ internal class SettingViewModel
         private val transactionRunner: TransactionRunner,
         private val biometricAuthenticator: BiometricAuthenticator
     ) : ViewModel() {
-        internal val expenseCount: StateFlow<Int> =
-        expenseRepository
+        internal val expenseCount: StateFlow<Int> = expenseRepository
             .getExpenseCount()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
         internal val isDarkTheme: StateFlow<Boolean> = preferenceRepository.isDarkTheme
@@ -54,26 +53,26 @@ internal class SettingViewModel
             val categories: List<Category>
         )
 
-            /**
-     * Exports expenses, budgets, and budget exclusions to a JSON file.
-     * @param uri URI where to save the backup file
-     * @return Result indicating success or failure
-     */
-    internal suspend fun exportData(uri: Uri): Result<String> =
-        withContext(Dispatchers.IO) {
-            try {
-                val export = coroutineScope {
-                    val expensesDeferred = async { expenseRepository.getAllExpensesForExport() }
-                    val budgetsDeferred = async { budgetRepository.getAllBudgetsForExport() }
-                    val exclusionsDeferred = async { budgetRepository.getAllExcludedCategoriesForExport() }
-                    val categoriesDeferred = async { categoryRepository.getAllForExport() }
-                    ExportData(
-                        expenses = expensesDeferred.await(),
-                        monthlyBudgets = budgetsDeferred.await(),
-                        budgetExcludedCategories = exclusionsDeferred.await(),
-                        categories = categoriesDeferred.await()
-                    )
-                }
+        /**
+         * Exports expenses, budgets, and budget exclusions to a JSON file.
+         * @param uri URI where to save the backup file
+         * @return Result indicating success or failure
+         */
+        internal suspend fun exportData(uri: Uri): Result<String> =
+            withContext(Dispatchers.IO) {
+                try {
+                    val export = coroutineScope {
+                        val expensesDeferred = async { expenseRepository.getAllExpensesForExport() }
+                        val budgetsDeferred = async { budgetRepository.getAllBudgetsForExport() }
+                        val exclusionsDeferred = async { budgetRepository.getAllExcludedCategoriesForExport() }
+                        val categoriesDeferred = async { categoryRepository.getAllForExport() }
+                        ExportData(
+                            expenses = expensesDeferred.await(),
+                            monthlyBudgets = budgetsDeferred.await(),
+                            budgetExcludedCategories = exclusionsDeferred.await(),
+                            categories = categoriesDeferred.await()
+                        )
+                    }
 
                     if (export.expenses.isEmpty() &&
                         export.monthlyBudgets.isEmpty() &&
