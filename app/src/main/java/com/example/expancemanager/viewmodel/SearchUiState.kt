@@ -49,103 +49,105 @@ internal data class SearchUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
-internal class SearchViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository,
-    categoryRepository: CategoryRepository
-) : ViewModel() {
-    /**
-     * The live filter. Text edits and control changes share one flow so a single
-     * downstream query serves both; only the text needs debouncing.
-     */
-    private val filterFlow = MutableStateFlow(ExpenseFilter())
+internal class SearchViewModel
+    @Inject
+    constructor(
+        private val expenseRepository: ExpenseRepository,
+        categoryRepository: CategoryRepository
+    ) : ViewModel() {
+        /**
+         * The live filter. Text edits and control changes share one flow so a single
+         * downstream query serves both; only the text needs debouncing.
+         */
+        private val filterFlow = MutableStateFlow(ExpenseFilter())
 
-    /**
-     * What the text field displays. Kept separate from [filterFlow] so typing echoes
-     * instantly while the query itself waits out the debounce.
-     */
-    private val _queryText = MutableStateFlow("")
-    internal val queryText: StateFlow<String> = _queryText.asStateFlow()
+        /**
+         * What the text field displays. Kept separate from [filterFlow] so typing echoes
+         * instantly while the query itself waits out the debounce.
+         */
+        private val _queryText = MutableStateFlow("")
+        internal val queryText: StateFlow<String> = _queryText.asStateFlow()
 
-    internal val uiState: StateFlow<SearchUiState> =
-        combine(
-            filterFlow
-                // Only the free-text field is debounced; toggling a category or sort
-                // should feel immediate, and those arrive on this same flow.
-                .debounce { filter -> if (filter.query.isBlank()) 0L else QUERY_DEBOUNCE_MS }
-                .distinctUntilChanged()
-                .flatMapLatest { filter ->
-                    expenseRepository.searchExpenses(filter).map { results -> filter to results }
-                },
-            categoryRepository.getCategories()
-        ) { (filter, results), categories ->
-            SearchUiState(
-                filter = filter,
-                results = results,
-                resultTotal = results.sumOf { it.amount },
-                isTruncated = results.size >= ExpenseRepository.DEFAULT_SEARCH_LIMIT,
-                categories = categories,
-                isLoading = false
-            )
-        }
-            .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
-
-    internal fun setQuery(query: String) {
-        _queryText.value = query
-        filterFlow.update { it.copy(query = query) }
-    }
-
-    /** Adds or removes [category] from the category filter. */
-    internal fun toggleCategory(category: String) {
-        filterFlow.update { filter ->
-            val next = if (category in filter.categories) {
-                filter.categories - category
-            } else {
-                filter.categories + category
+        internal val uiState: StateFlow<SearchUiState> =
+            combine(
+                filterFlow
+                    // Only the free-text field is debounced; toggling a category or sort
+                    // should feel immediate, and those arrive on this same flow.
+                    .debounce { filter -> if (filter.query.isBlank()) 0L else QUERY_DEBOUNCE_MS }
+                    .distinctUntilChanged()
+                    .flatMapLatest { filter ->
+                        expenseRepository.searchExpenses(filter).map { results -> filter to results }
+                    },
+                categoryRepository.getCategories()
+            ) { (filter, results), categories ->
+                SearchUiState(
+                    filter = filter,
+                    results = results,
+                    resultTotal = results.sumOf { it.amount },
+                    isTruncated = results.size >= ExpenseRepository.DEFAULT_SEARCH_LIMIT,
+                    categories = categories,
+                    isLoading = false
+                )
             }
-            filter.copy(categories = next)
+                .distinctUntilChanged()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
+
+        internal fun setQuery(query: String) {
+            _queryText.value = query
+            filterFlow.update { it.copy(query = query) }
+        }
+
+        /** Adds or removes [category] from the category filter. */
+        internal fun toggleCategory(category: String) {
+            filterFlow.update { filter ->
+                val next = if (category in filter.categories) {
+                    filter.categories - category
+                } else {
+                    filter.categories + category
+                }
+                filter.copy(categories = next)
+            }
+        }
+
+        internal fun setAmountRange(
+            min: Double?,
+            max: Double?
+        ) {
+            filterFlow.update { it.copy(minAmount = min, maxAmount = max) }
+        }
+
+        internal fun setDateRange(
+            start: Long?,
+            end: Long?
+        ) {
+            filterFlow.update { it.copy(startDate = start, endDate = end) }
+        }
+
+        internal fun setSortOrder(sortOrder: ExpenseSortOrder) {
+            filterFlow.update { it.copy(sortOrder = sortOrder) }
+        }
+
+        /** Clears every filter facet but keeps the typed query and the chosen sort. */
+        internal fun clearFilters() {
+            filterFlow.update { filter ->
+                ExpenseFilter(query = filter.query, sortOrder = filter.sortOrder)
+            }
+        }
+
+        /** Resets the screen to its opening state, text field included. */
+        internal fun clearAll() {
+            _queryText.value = ""
+            filterFlow.value = ExpenseFilter()
+        }
+
+        internal fun deleteExpense(expense: Expense) {
+            viewModelScope.launch(Dispatchers.IO) {
+                expenseRepository.deleteExpense(expense)
+            }
+        }
+
+        private companion object {
+            /** Long enough to skip intermediate keystrokes, short enough to feel live. */
+            const val QUERY_DEBOUNCE_MS = 250L
         }
     }
-
-    internal fun setAmountRange(
-        min: Double?,
-        max: Double?
-    ) {
-        filterFlow.update { it.copy(minAmount = min, maxAmount = max) }
-    }
-
-    internal fun setDateRange(
-        start: Long?,
-        end: Long?
-    ) {
-        filterFlow.update { it.copy(startDate = start, endDate = end) }
-    }
-
-    internal fun setSortOrder(sortOrder: ExpenseSortOrder) {
-        filterFlow.update { it.copy(sortOrder = sortOrder) }
-    }
-
-    /** Clears every filter facet but keeps the typed query and the chosen sort. */
-    internal fun clearFilters() {
-        filterFlow.update { filter ->
-            ExpenseFilter(query = filter.query, sortOrder = filter.sortOrder)
-        }
-    }
-
-    /** Resets the screen to its opening state, text field included. */
-    internal fun clearAll() {
-        _queryText.value = ""
-        filterFlow.value = ExpenseFilter()
-    }
-
-    internal fun deleteExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            expenseRepository.deleteExpense(expense)
-        }
-    }
-
-    private companion object {
-        /** Long enough to skip intermediate keystrokes, short enough to feel live. */
-        const val QUERY_DEBOUNCE_MS = 250L
-    }
-}

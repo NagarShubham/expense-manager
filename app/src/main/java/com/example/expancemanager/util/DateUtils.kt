@@ -16,7 +16,10 @@ internal object DateUtils {
 
     /** Returns the current (month, year) as a 0-based month and full year. */
     internal fun currentMonthYear(): Pair<Int, Int> =
-        localCalendar.get()!!.run { timeInMillis = System.currentTimeMillis(); get(Calendar.MONTH) to get(Calendar.YEAR) }
+        localCalendar.get()!!.run {
+            timeInMillis = System.currentTimeMillis()
+            get(Calendar.MONTH) to get(Calendar.YEAR)
+        }
 
     /**
      * Returns (month, year) for the month that is [increment] months from the given month/year.

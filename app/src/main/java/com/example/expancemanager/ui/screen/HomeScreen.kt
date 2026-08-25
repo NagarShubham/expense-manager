@@ -166,7 +166,7 @@ internal fun HomeScreen(
                     contentType = HomeContentType.HEADER
                 ) {
                     VSpace(AppSpacing.small)
-                    SectionHeader(title = stringResource(R.string.home_recent_transactions,uiState.expenses.size))
+                    SectionHeader(title = stringResource(R.string.home_recent_transactions, uiState.expenses.size))
                 }
 
                 items(

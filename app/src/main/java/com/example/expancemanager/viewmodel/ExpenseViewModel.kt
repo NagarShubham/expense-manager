@@ -65,33 +65,33 @@ internal class ExpenseViewModel
         private val selectedMonthYearFlow = MutableStateFlow(DateUtils.currentMonthYear())
 
         /**
-     * One expense-list query per month, then derive totals in memory. Avoids three Room
-     * invalidations (list + SUM + GROUP BY) on every write to the expenses table.
-     */
-    internal val uiState: StateFlow<ExpenseUiState> =
-        selectedMonthYearFlow
-            .flatMapLatest { (month, year) ->
-                val (startDate, endDate) = DateUtils.getMonthDateRange(month, year)
-                combine(
-                    expenseRepository.getExpensesByDateRange(startDate, endDate),
-                    budgetRepository.getBudgetByMonthYear(month, year),
-                    budgetRepository.getExcludedCategoriesByMonthYear(month, year),
-                    categoryRepository.getCategories()
-                ) { expenses, budget, excludedList, categories ->
-                    buildUiState(
-                        expenses = expenses,
-                        month = month,
-                        year = year,
-                        expectedAmount = budget?.expectedAmount,
-                        excludedList = excludedList,
-                        categories = categories
-                    )
+         * One expense-list query per month, then derive totals in memory. Avoids three Room
+         * invalidations (list + SUM + GROUP BY) on every write to the expenses table.
+         */
+        internal val uiState: StateFlow<ExpenseUiState> =
+            selectedMonthYearFlow
+                .flatMapLatest { (month, year) ->
+                    val (startDate, endDate) = DateUtils.getMonthDateRange(month, year)
+                    combine(
+                        expenseRepository.getExpensesByDateRange(startDate, endDate),
+                        budgetRepository.getBudgetByMonthYear(month, year),
+                        budgetRepository.getExcludedCategoriesByMonthYear(month, year),
+                        categoryRepository.getCategories()
+                    ) { expenses, budget, excludedList, categories ->
+                        buildUiState(
+                            expenses = expenses,
+                            month = month,
+                            year = year,
+                            expectedAmount = budget?.expectedAmount,
+                            excludedList = excludedList,
+                            categories = categories
+                        )
+                    }
                 }
-            }
-            .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpenseUiState())
+                .distinctUntilChanged()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpenseUiState())
 
-    internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
+        internal val backStack = mutableStateListOf<AppRoute>(HomeScreenRoute)
 
         /** Pushes a route onto the back stack. */
         internal fun navigateTo(route: AppRoute) {
@@ -105,14 +105,14 @@ internal class ExpenseViewModel
             }
         }
 
-    internal fun loadExpensesForMonth(
-        month: Int,
-        year: Int
-    ) {
-        selectedMonthYearFlow.value = month to year
-    }
+        internal fun loadExpensesForMonth(
+            month: Int,
+            year: Int
+        ) {
+            selectedMonthYearFlow.value = month to year
+        }
 
-    internal fun insertExpense(expense: Expense) {
+        internal fun insertExpense(expense: Expense) {
             viewModelScope.launch(Dispatchers.IO) {
                 expenseRepository.insertExpense(expense)
             }
@@ -141,47 +141,47 @@ internal class ExpenseViewModel
             loadExpensesForMonth(newMonth, newYear)
         }
 
-    internal fun goToCurrentMonth() {
-        val (month, year) = DateUtils.currentMonthYear()
-        loadExpensesForMonth(month, year)
-    }
+        internal fun goToCurrentMonth() {
+            val (month, year) = DateUtils.currentMonthYear()
+            loadExpensesForMonth(month, year)
+        }
 
-    private companion object {
-        fun buildUiState(
-            expenses: List<Expense>,
-            month: Int,
-            year: Int,
-            expectedAmount: Double?,
-            excludedList: List<String>,
-            categories: List<Category>
-        ): ExpenseUiState {
-            val excluded = excludedList.toSet()
-            val totalsByCategory = LinkedHashMap<String, Double>()
-            var totalAmount = 0.0
-            var excludedSum = 0.0
-            for (expense in expenses) {
-                totalAmount += expense.amount
-                totalsByCategory[expense.category] =
-                    (totalsByCategory[expense.category] ?: 0.0) + expense.amount
-                if (expense.category in excluded) {
-                    excludedSum += expense.amount
+        private companion object {
+            fun buildUiState(
+                expenses: List<Expense>,
+                month: Int,
+                year: Int,
+                expectedAmount: Double?,
+                excludedList: List<String>,
+                categories: List<Category>
+            ): ExpenseUiState {
+                val excluded = excludedList.toSet()
+                val totalsByCategory = LinkedHashMap<String, Double>()
+                var totalAmount = 0.0
+                var excludedSum = 0.0
+                for (expense in expenses) {
+                    totalAmount += expense.amount
+                    totalsByCategory[expense.category] =
+                        (totalsByCategory[expense.category] ?: 0.0) + expense.amount
+                    if (expense.category in excluded) {
+                        excludedSum += expense.amount
+                    }
                 }
+                val categoryTotals =
+                    totalsByCategory
+                        .map { (category, total) -> CategoryTotal(category, total) }
+                        .sortedByDescending { it.total }
+                return ExpenseUiState(
+                    expenses = expenses,
+                    totalAmount = totalAmount,
+                    categoryTotals = categoryTotals,
+                    selectedMonth = month,
+                    selectedYear = year,
+                    expectedMonthlyAmount = expectedAmount,
+                    totalAmountForBudget = (totalAmount - excludedSum).coerceAtLeast(0.0),
+                    excludedCategoryNames = excluded,
+                    categories = categories
+                )
             }
-            val categoryTotals =
-                totalsByCategory
-                    .map { (category, total) -> CategoryTotal(category, total) }
-                    .sortedByDescending { it.total }
-            return ExpenseUiState(
-                expenses = expenses,
-                totalAmount = totalAmount,
-                categoryTotals = categoryTotals,
-                selectedMonth = month,
-                selectedYear = year,
-                expectedMonthlyAmount = expectedAmount,
-                totalAmountForBudget = (totalAmount - excludedSum).coerceAtLeast(0.0),
-                excludedCategoryNames = excluded,
-                categories = categories
-            )
         }
     }
-}

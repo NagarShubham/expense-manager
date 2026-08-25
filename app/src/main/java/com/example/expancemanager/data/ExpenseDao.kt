@@ -61,6 +61,7 @@ internal interface ExpenseDao {
         startDate: Long,
         endDate: Long
     ): Flow<List<MonthlyTotal>>
+
     /**
      * History-wide search. Every filter is optional: a null (or blank, for [query])
      * parameter disables that clause, so one prepared statement serves every filter

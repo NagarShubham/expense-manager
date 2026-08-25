@@ -40,17 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expancemanager.R
 import com.example.expancemanager.data.Expense
-import com.example.expancemanager.ui.components.AmountText
 import com.example.expancemanager.ui.components.AppBackTopBar
 import com.example.expancemanager.ui.components.AppCard
 import com.example.expancemanager.ui.components.AppSpacing

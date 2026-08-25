@@ -3,8 +3,6 @@ package com.example.expancemanager.ui.screen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -28,7 +25,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,14 +52,14 @@ import com.example.expancemanager.ui.components.AppBackTopBar
 import com.example.expancemanager.ui.components.AppSpacing
 import com.example.expancemanager.ui.components.HeroGradientCard
 import com.example.expancemanager.ui.components.OverlineText
-import com.example.expancemanager.ui.components.VSpace
-import com.example.expancemanager.ui.theme.AppRadius
-import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.ui.components.SettingsActionRow
 import com.example.expancemanager.ui.components.SettingsGroupCard
 import com.example.expancemanager.ui.components.SettingsNavigationRow
 import com.example.expancemanager.ui.components.SettingsSection
 import com.example.expancemanager.ui.components.SettingsSwitchRow
+import com.example.expancemanager.ui.components.VSpace
+import com.example.expancemanager.ui.theme.AppRadius
+import com.example.expancemanager.ui.theme.appColors
 import com.example.expancemanager.util.showToast
 import com.example.expancemanager.viewmodel.SettingViewModel
 import kotlinx.coroutines.launch
