@@ -65,7 +65,7 @@ internal class ReportsViewModel
     ) : ViewModel() {
         private val selectionFlow = MutableStateFlow(ReportPeriodSelection())
 
-        internal val uiState: StateFlow<ReportsUiState> =
+            internal val uiState: StateFlow<ReportsUiState> =
         selectionFlow
             .flatMapLatest { selection ->
                 val resolved = ReportPeriodResolver.resolve(

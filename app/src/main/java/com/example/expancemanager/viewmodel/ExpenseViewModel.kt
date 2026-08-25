@@ -105,7 +105,7 @@ internal class ExpenseViewModel
             }
         }
 
-        internal fun loadExpensesForMonth(
+            internal fun loadExpensesForMonth(
         month: Int,
         year: Int
     ) {
