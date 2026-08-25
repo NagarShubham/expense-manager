@@ -51,86 +51,88 @@ internal data class ReportsUiState(
 }
 
 @HiltViewModel
-internal class ReportsViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository,
-    private val categoryRepository: CategoryRepository
-) : ViewModel() {
-    private val selectionFlow = MutableStateFlow(ReportPeriodSelection())
+internal class ReportsViewModel
+    @Inject
+    constructor(
+        private val expenseRepository: ExpenseRepository,
+        private val categoryRepository: CategoryRepository
+    ) : ViewModel() {
+        private val selectionFlow = MutableStateFlow(ReportPeriodSelection())
 
-    private val _uiState = MutableStateFlow(ReportsUiState())
-    internal val uiState: StateFlow<ReportsUiState> = _uiState.asStateFlow()
+        private val _uiState = MutableStateFlow(ReportsUiState())
+        internal val uiState: StateFlow<ReportsUiState> = _uiState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            val reportFlow = selectionFlow.flatMapLatest { selection ->
-                val resolved = ReportPeriodResolver.resolve(
-                    kind = selection.kind,
-                    customStartMillis = selection.customStartMillis,
-                    customEndMillis = selection.customEndMillis
-                )
-                if (resolved == null) {
-                    flowOf(
-                        ReportsUiState(
-                            selection = selection,
-                            rangeLabel = "",
-                            isRangeInvalid = true
-                        )
+        init {
+            viewModelScope.launch {
+                val reportFlow = selectionFlow.flatMapLatest { selection ->
+                    val resolved = ReportPeriodResolver.resolve(
+                        kind = selection.kind,
+                        customStartMillis = selection.customStartMillis,
+                        customEndMillis = selection.customEndMillis
                     )
-                } else {
-                    combine(
-                        expenseRepository.getTotalAmountByDateRange(resolved.startMillis, resolved.endMillis),
-                        expenseRepository.getCategoryTotalsByDateRange(resolved.startMillis, resolved.endMillis),
-                        expenseRepository.getMonthlyTotalsByDateRange(resolved.startMillis, resolved.endMillis)
-                    ) { total, categories, monthly ->
-                        ReportsUiState(
-                            selection = selection,
-                            rangeLabel = rangeLabel(selection.kind, resolved),
-                            periodEndMonth = resolved.end.month,
-                            periodEndYear = resolved.end.year,
-                            isRangeInvalid = false,
-                            report = ReportInsights.buildPeriodReport(
-                                totalSpending = total ?: 0.0,
-                                monthlyTotals = monthly,
-                                categoryTotals = categories,
-                                monthsInRange = resolved.months
+                    if (resolved == null) {
+                        flowOf(
+                            ReportsUiState(
+                                selection = selection,
+                                rangeLabel = "",
+                                isRangeInvalid = true
                             )
                         )
+                    } else {
+                        combine(
+                            expenseRepository.getTotalAmountByDateRange(resolved.startMillis, resolved.endMillis),
+                            expenseRepository.getCategoryTotalsByDateRange(resolved.startMillis, resolved.endMillis),
+                            expenseRepository.getMonthlyTotalsByDateRange(resolved.startMillis, resolved.endMillis)
+                        ) { total, categories, monthly ->
+                            ReportsUiState(
+                                selection = selection,
+                                rangeLabel = rangeLabel(selection.kind, resolved),
+                                periodEndMonth = resolved.end.month,
+                                periodEndYear = resolved.end.year,
+                                isRangeInvalid = false,
+                                report = ReportInsights.buildPeriodReport(
+                                    totalSpending = total ?: 0.0,
+                                    monthlyTotals = monthly,
+                                    categoryTotals = categories,
+                                    monthsInRange = resolved.months
+                                )
+                            )
+                        }
                     }
                 }
+
+                combine(reportFlow, categoryRepository.getCategories()) { state, categories ->
+                    state.copy(categories = categories)
+                }.collect { _uiState.value = it }
             }
+        }
 
-            combine(reportFlow, categoryRepository.getCategories()) { state, categories ->
-                state.copy(categories = categories)
-            }.collect { _uiState.value = it }
+        internal fun selectPeriod(kind: ReportPeriodKind) {
+            selectionFlow.update { it.copy(kind = kind) }
+        }
+
+        internal fun setCustomDateRange(
+            startMillis: Long,
+            endMillis: Long
+        ) {
+            selectionFlow.update {
+                it.copy(
+                    kind = ReportPeriodKind.CUSTOM,
+                    customStartMillis = startMillis,
+                    customEndMillis = endMillis
+                )
+            }
+        }
+
+        private fun rangeLabel(
+            kind: ReportPeriodKind,
+            resolved: ResolvedReportPeriod
+        ): String {
+            if (kind == ReportPeriodKind.CUSTOM) {
+                return "${DateUtils.formatDate(resolved.startMillis)} – ${DateUtils.formatDate(resolved.endMillis)}"
+            }
+            val startLabel = DateUtils.formatMonthYear(resolved.start.month, resolved.start.year)
+            val endLabel = DateUtils.formatMonthYear(resolved.end.month, resolved.end.year)
+            return if (resolved.start == resolved.end) startLabel else "$startLabel – $endLabel"
         }
     }
-
-    internal fun selectPeriod(kind: ReportPeriodKind) {
-        selectionFlow.update { it.copy(kind = kind) }
-    }
-
-    internal fun setCustomDateRange(
-        startMillis: Long,
-        endMillis: Long
-    ) {
-        selectionFlow.update {
-            it.copy(
-                kind = ReportPeriodKind.CUSTOM,
-                customStartMillis = startMillis,
-                customEndMillis = endMillis
-            )
-        }
-    }
-
-    private fun rangeLabel(
-        kind: ReportPeriodKind,
-        resolved: ResolvedReportPeriod
-    ): String {
-        if (kind == ReportPeriodKind.CUSTOM) {
-            return "${DateUtils.formatDate(resolved.startMillis)} – ${DateUtils.formatDate(resolved.endMillis)}"
-        }
-        val startLabel = DateUtils.formatMonthYear(resolved.start.month, resolved.start.year)
-        val endLabel = DateUtils.formatMonthYear(resolved.end.month, resolved.end.year)
-        return if (resolved.start == resolved.end) startLabel else "$startLabel – $endLabel"
-    }
-}

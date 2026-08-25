@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +93,7 @@ internal fun BudgetSettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val categoryViewModel: CategoryViewModel = hiltViewModel()
     val categories by categoryViewModel.categories.collectAsState()
@@ -212,12 +214,12 @@ internal fun BudgetSettingsScreen(
             Button(
                 onClick = {
                     if (amount <= 0) {
-                        context.showShortToast(context.getString(R.string.budget_invalid_amount))
+                        context.showShortToast(resources.getString(R.string.budget_invalid_amount))
                         return@Button
                     }
                     scope.launch {
                         viewModel.setMonthlyBudgetAndWait(selectedMonth, selectedYear, amount)
-                        context.showShortToast(context.getString(R.string.budget_saved))
+                        context.showShortToast(resources.getString(R.string.budget_saved))
                         onNavigateBack()
                     }
                 },
@@ -239,7 +241,7 @@ internal fun BudgetSettingsScreen(
                         scope.launch {
                             viewModel.clearMonthlyBudget(selectedMonth, selectedYear)
                             amountText = ""
-                            context.showShortToast(context.getString(R.string.budget_cleared))
+                            context.showShortToast(resources.getString(R.string.budget_cleared))
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
