@@ -9,7 +9,6 @@
     <string name="action_cancel">Cancel</string>
 
     <!-- Content Descriptions -->
-    <string name="cd_add_expense">Add Expense</string>
     <string name="cd_previous_month">Previous Month</string>
     <string name="cd_next_month">Next Month</string>
     <string name="cd_go_to_current_month">Go to current month</string>
@@ -23,12 +22,9 @@
     <string name="amount_negative">%1$s</string>
 
     <!-- Home Screen -->
-    <string name="home_total_expenses">Total Expenses</string>
     <string name="home_total_spent">Total spent</string>
-    <string name="home_category_breakdown">Category Breakdown</string>
     <string name="home_top_categories">Top categories</string>
     <string name="home_recent_transactions">Recent transactions (%d)</string>
-    <string name="home_view_all_categories">View All %d Categories</string>
     <string name="home_view_all">View all</string>
     <string name="home_transactions_count">%d transactions this month</string>
     <string name="home_transactions_count_singular">1 transaction this month</string>
@@ -36,7 +32,6 @@
     <string name="home_empty_subtitle">Add your first expense to start tracking where your money goes</string>
     <string name="home_empty_action">Add expense</string>
     <string name="home_empty_emoji">📊</string>
-    <string name="home_no_budget_hint">No budget set for this month</string>
     <string name="budget_summary_left">%1$s left of %2$s budget</string>
     <string name="budget_summary_over">%1$s over budget</string>
     <string name="budget_summary_used_of">Used %1$s of %2$s</string>

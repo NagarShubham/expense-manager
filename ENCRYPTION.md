@@ -133,7 +133,7 @@ For a financial tracking app with typical usage patterns, the encryption overhea
 2. Connect device via ADB
 3. Pull database file:
    ```bash
-   adb pull /data/data/com.example.expancemanager/databases/expense_database
+   adb pull /data/data/com.example.expensemanager/databases/expense_database
    ```
 4. Try to open with standard SQLite tools:
    ```bash
@@ -145,7 +145,7 @@ For a financial tracking app with typical usage patterns, the encryption overhea
 
 1. Check EncryptedSharedPreferences file:
    ```bash
-   adb pull /data/data/com.example.expancemanager/shared_prefs/secure_expense_prefs.xml
+   adb pull /data/data/com.example.expensemanager/shared_prefs/secure_expense_prefs.xml
    ```
 2. Open the file - values should be encrypted (unreadable)
 

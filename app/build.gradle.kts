@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.expancemanager"
+    namespace = "com.example.expensemanager"
     compileSdk = 36
 
     defaultConfig {

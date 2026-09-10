@@ -1,0 +1,18 @@
+package com.example.expensemanager.util
+
+import android.content.Context
+import android.widget.Toast
+
+/**
+ * Shows a long-duration toast. Use for important feedback (e.g. export/import results).
+ */
+internal fun Context.showToast(message: String) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+}
+
+/**
+ * Shows a short-duration toast. Use for quick acknowledgments (e.g. budget saved).
+ */
+internal fun Context.showShortToast(message: String) {
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}

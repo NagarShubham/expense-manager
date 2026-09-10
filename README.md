@@ -73,7 +73,7 @@ flowchart LR
 ```
 
 ```
-app/src/main/java/com/example/expancemanager/
+app/src/main/java/com/example/expensemanager/
 ├── data/          entities, DAOs, repositories, preferences
 ├── di/            Hilt modules
 ├── nav/           Navigation 3 routes
