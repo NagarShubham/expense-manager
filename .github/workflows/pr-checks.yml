@@ -2,7 +2,7 @@ name: PR checks
 
 on:
   pull_request:
-    branches: [master]
+    # branches: [master]
     # opened starts the first run; synchronize/reopened keep CI current and
     # pair with concurrency so obsolete runs are cancelled on new commits.
     types: [opened, synchronize, reopened]
