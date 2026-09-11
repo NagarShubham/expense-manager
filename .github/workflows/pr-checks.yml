@@ -56,10 +56,16 @@ jobs:
           if-no-files-found: warn
           compression-level: 9
 
+      - name: Get APK name
+        id: get_apk_name
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          echo "filename=$(basename $APK_PATH .apk)" >> $GITHUB_OUTPUT
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: ${{ steps.get_apk_name.outputs.filename }}
           path: app/build/outputs/apk/debug/**/*.apk
           retention-days: 1
           if-no-files-found: error
