@@ -67,6 +67,6 @@ jobs:
         with:
           name: ${{ steps.get_apk_name.outputs.filename }}
           path: app/build/outputs/apk/debug/**/*.apk
-          retention-days: 1
+          retention-days: 4
           if-no-files-found: error
           compression-level: 9
