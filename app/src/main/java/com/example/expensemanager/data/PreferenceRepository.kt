@@ -46,6 +46,25 @@ class PreferenceRepository
         private fun loadBiometricLockEnabled(): Boolean =
             prefs.getBoolean(KEY_BIOMETRIC_LOCK, false)
 
+        /**
+         * Fingerprint of the data captured by the most recent successful auto-backup.
+         * The backup worker compares this against the current data's fingerprint to
+         * decide whether anything changed since the last run. Empty string means no
+         * backup has ever succeeded.
+         */
+        internal fun getLastBackupFingerprint(): String =
+            prefs.getString(KEY_LAST_BACKUP_FINGERPRINT, "").orEmpty()
+
+        /** Records the state of a successful auto-backup so the next run can skip if unchanged. */
+        internal fun setLastBackupFingerprint(fingerprint: String) {
+            prefs.edit { putString(KEY_LAST_BACKUP_FINGERPRINT, fingerprint) }
+        }
+
+        /** Persists when the last successful auto-backup ran (epoch millis). */
+        internal fun setLastBackupTime(timeMillis: Long) {
+            prefs.edit { putLong(KEY_LAST_BACKUP_TIME, timeMillis) }
+        }
+
         private fun loadDarkTheme(): Boolean {
             if (prefs.contains(KEY_DARK_THEME)) {
                 return prefs.getBoolean(KEY_DARK_THEME, defaultDarkTheme)
@@ -65,5 +84,7 @@ class PreferenceRepository
             const val LEGACY_PREFS_NAME = "app_preferences"
             const val KEY_DARK_THEME = "dark_theme"
             const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
+            const val KEY_LAST_BACKUP_FINGERPRINT = "last_backup_fingerprint"
+            const val KEY_LAST_BACKUP_TIME = "last_backup_time"
         }
     }

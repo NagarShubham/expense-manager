@@ -47,6 +47,14 @@
 -keep class com.example.expensemanager.util.BackupManager$BackupData { *; }
 
 # ============================================================================
+# WorkManager
+# ============================================================================
+
+# WorkManager references workers by class name; keep the CoroutineWorker subclass
+# (and its Hilt-generated AssistedInject constructor) so the factory can instantiate it.
+-keep class com.example.expensemanager.worker.AutoBackupWorker { *; }
+
+# ============================================================================
 # Kotlin Coroutines
 # ============================================================================
 

@@ -20,6 +20,10 @@ mockk = "1.14.3"
 coroutines = "1.10.2"
 turbine = "1.2.0"
 truth = "1.4.4"
+work = "2.11.2"
+# Keep androidx.hilt at 1.3.x: 1.4.0 pulls Dagger 2.59 (needs a newer AGP than 8.13.1)
+# and requires KGP >= 2.2.0. 1.3.0 stays compatible with the project's Hilt 2.57.1.
+hiltExt = "1.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +51,9 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 dagger-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltVersion" }
 dagger-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltVersion" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltExt" }
+androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltExt" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
