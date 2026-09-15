@@ -6,6 +6,13 @@
     <uses-permission
         android:name="android.permission.USE_FINGERPRINT"
         android:maxSdkVersion="27" />
+    <!--
+        Auto-backup writes to the public Downloads/ExpenseBackup folder. API 29+ uses
+        MediaStore (scoped storage, no permission needed); API 26–28 needs legacy storage write.
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:name=".ExpenseManagerApplication"
@@ -27,6 +34,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Disable WorkManager's default on-startup initializer so the app can provide its
+            own Hilt-aware Configuration via ExpenseManagerApplication (Configuration.Provider).
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>
