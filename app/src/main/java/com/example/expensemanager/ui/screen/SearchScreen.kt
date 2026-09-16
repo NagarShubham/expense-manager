@@ -32,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,7 +47,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -68,6 +66,7 @@ import com.example.expensemanager.ui.components.HSpace
 import com.example.expensemanager.ui.components.SectionHeader
 import com.example.expensemanager.ui.components.StatPill
 import com.example.expensemanager.ui.components.VSpace
+import com.example.expensemanager.ui.components.appTextFieldColors
 import com.example.expensemanager.ui.theme.AppRadius
 import com.example.expensemanager.ui.theme.TabularFigures
 import com.example.expensemanager.ui.theme.appColors
@@ -205,12 +204,7 @@ private fun SearchBar(
             singleLine = true,
             maxLines = 1,
             shape = AppRadius.chip,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent
-            )
+            colors = appTextFieldColors()
         )
         HSpace(AppSpacing.small)
         FilterButton(
@@ -378,10 +372,10 @@ private fun FilterSheet(
     // Amount inputs are local until they parse: committing on every keystroke would
     // requery mid-number ("5" then "50" then "500").
     var minText by remember(filter.minAmount) {
-        mutableStateOf(filter.minAmount?.let { formatAmountForInput(it) } ?: "")
+        mutableStateOf(filter.minAmount?.let { DateUtils.formatAmountForInput(it) } ?: "")
     }
     var maxText by remember(filter.maxAmount) {
-        mutableStateOf(filter.maxAmount?.let { formatAmountForInput(it) } ?: "")
+        mutableStateOf(filter.maxAmount?.let { DateUtils.formatAmountForInput(it) } ?: "")
     }
     val minValue = minText.toDoubleOrNull()
     val maxValue = maxText.toDoubleOrNull()
@@ -620,12 +614,7 @@ private fun AmountBoundField(
         prefix = { Text(stringResource(R.string.currency_symbol)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         shape = AppRadius.chip,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Transparent
-        )
+        colors = appTextFieldColors()
     )
 }
 
@@ -689,15 +678,3 @@ private fun DateRangeRow(
         }
     }
 }
-
-/**
- * Renders an amount into the text field's expected format: plain digits, and no
- * trailing ".0" for whole rupees (the common case) so the field reads like something
- * the user typed rather than a machine value.
- */
-internal fun formatAmountForInput(amount: Double): String =
-    if (amount == amount.toLong().toDouble()) {
-        amount.toLong().toString()
-    } else {
-        amount.toString()
-    }

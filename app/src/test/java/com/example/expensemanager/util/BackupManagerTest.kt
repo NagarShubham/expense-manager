@@ -7,12 +7,14 @@ import com.example.expensemanager.data.Category
 import com.example.expensemanager.data.Expense
 import com.example.expensemanager.data.MonthlyBudget
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 
 class BackupManagerTest {
     private val uri = mockk<Uri>()
@@ -179,6 +181,89 @@ class BackupManagerTest {
         assertThat(importResult.isFailure).isTrue()
     }
 
+    @Test
+    fun generateAutoBackupFileName_usesDistinctPrefixFromManualExport() {
+        // The retention sweep deletes by prefix, so an auto-backup must never be
+        // mistakable for a manual export sitting in the same folder.
+        val autoName = backupManager.generateAutoBackupFileName()
+
+        assertThat(autoName).matches("expense_autobackup_\\d{8}_\\d{6}\\.json")
+        assertThat(autoName).startsWith(BackupManager.AUTO_BACKUP_FILE_PREFIX)
+        assertThat(backupManager.generateBackupFileName()).doesNotMatch("expense_autobackup_.*")
+    }
+
+    @Test
+    fun contentSignature_isStableForUnchangedData() {
+        // The export timestamp moves every run; if it leaked into the signature the
+        // worker would rewrite the backup file every 15 minutes forever.
+        val first = backupManager.contentSignature(EXPENSES, BUDGETS, EXCLUSIONS, CATEGORIES)
+        val second = backupManager.contentSignature(EXPENSES, BUDGETS, EXCLUSIONS, CATEGORIES)
+
+        assertThat(first).isEqualTo(second)
+        assertThat(first).matches("[0-9a-f]{64}")
+    }
+
+    @Test
+    fun contentSignature_changesForEveryBackedUpField() {
+        val baseline = backupManager.contentSignature(EXPENSES, BUDGETS, EXCLUSIONS, CATEGORIES)
+
+        val variants = mapOf(
+            "edited expense title" to backupManager.contentSignature(
+                EXPENSES.map { it.copy(title = "Tea") },
+                BUDGETS,
+                EXCLUSIONS,
+                CATEGORIES
+            ),
+            "edited expense amount" to backupManager.contentSignature(
+                EXPENSES.map { it.copy(amount = 5.0) },
+                BUDGETS,
+                EXCLUSIONS,
+                CATEGORIES
+            ),
+            "added expense" to backupManager.contentSignature(
+                EXPENSES + EXPENSES.first().copy(id = 2L),
+                BUDGETS,
+                EXCLUSIONS,
+                CATEGORIES
+            ),
+            "edited budget" to backupManager.contentSignature(
+                EXPENSES,
+                BUDGETS.map { it.copy(expectedAmount = 600.0) },
+                EXCLUSIONS,
+                CATEGORIES
+            ),
+            "removed exclusion" to backupManager.contentSignature(EXPENSES, BUDGETS, emptyList(), CATEGORIES),
+            "renamed category emoji" to backupManager.contentSignature(
+                EXPENSES,
+                BUDGETS,
+                EXCLUSIONS,
+                CATEGORIES.map { it.copy(emoji = "🥐") }
+            )
+        )
+
+        variants.forEach { (change, signature) ->
+            assertWithMessage(change).that(signature).isNotEqualTo(baseline)
+        }
+    }
+
+    @Test
+    fun contentSignature_matchesTheFileThatWouldBeWritten() = runTest {
+        // The signature has to describe the exported payload exactly, or the worker will
+        // skip a backup it should have written. Compare against a real export with the
+        // one volatile field (exportDate) normalized away.
+        stubExportStream()
+        assertThat(backupManager.exportToJson(uri, EXPENSES, BUDGETS, EXCLUSIONS, CATEGORIES).isSuccess).isTrue()
+
+        val exported = outputBuffer.toString(Charsets.UTF_8.name())
+        val normalized = exported.replace(Regex("\"exportDate\": \\d+"), "\"exportDate\": 0")
+        val expected = MessageDigest
+            .getInstance("SHA-256")
+            .digest(normalized.toByteArray(Charsets.UTF_8))
+            .joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+        assertThat(backupManager.contentSignature(EXPENSES, BUDGETS, EXCLUSIONS, CATEGORIES)).isEqualTo(expected)
+    }
+
     private fun stubExportStream() {
         outputBuffer.reset()
         every { contentResolver.openOutputStream(uri) } answers {
@@ -189,5 +274,21 @@ class BackupManagerTest {
 
     private fun stubImportStream(bytes: ByteArray) {
         every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(bytes)
+    }
+
+    private companion object {
+        val EXPENSES = listOf(
+            Expense(
+                id = 1L,
+                title = "Coffee",
+                amount = 4.5,
+                category = "Food",
+                date = 1_700_000_000_000L,
+                createdAt = 1_700_000_000_000L
+            )
+        )
+        val BUDGETS = listOf(MonthlyBudget(month = 0, year = 2024, expectedAmount = 500.0))
+        val EXCLUSIONS = listOf(BudgetExcludedCategory(month = 0, year = 2024, category = "Travel"))
+        val CATEGORIES = listOf(Category(name = "Food", emoji = "🍔", sortOrder = 0))
     }
 }

@@ -10,6 +10,7 @@ import com.example.expensemanager.data.CategoryRepository
 import com.example.expensemanager.data.CategoryTotal
 import com.example.expensemanager.data.Expense
 import com.example.expensemanager.data.ExpenseRepository
+import com.example.expensemanager.data.toEmojiMap
 import com.example.expensemanager.nav.AppRoute
 import com.example.expensemanager.nav.HomeScreenRoute
 import com.example.expensemanager.util.DateUtils
@@ -49,7 +50,7 @@ internal data class ExpenseUiState(
      * Compose skip recomposition and honor `remember(..., emojiMap)` keys in the UI instead of
      * rebuilding a fresh map on every access.
      */
-    val categoryEmojiMap: Map<String, String> by lazy { categories.associate { it.name to it.emoji } }
+    val categoryEmojiMap: Map<String, String> by lazy { categories.toEmojiMap() }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

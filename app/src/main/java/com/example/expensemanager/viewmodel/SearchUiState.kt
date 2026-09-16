@@ -9,6 +9,7 @@ import com.example.expensemanager.data.Expense
 import com.example.expensemanager.data.ExpenseFilter
 import com.example.expensemanager.data.ExpenseRepository
 import com.example.expensemanager.data.ExpenseSortOrder
+import com.example.expensemanager.data.toEmojiMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,7 +40,7 @@ internal data class SearchUiState(
     /** True before the first query settles, so the UI can hold off on the empty state. */
     val isLoading: Boolean = true
 ) {
-    val categoryEmojiMap: Map<String, String> by lazy { categories.associate { it.name to it.emoji } }
+    val categoryEmojiMap: Map<String, String> by lazy { categories.toEmojiMap() }
 
     val resultCount: Int get() = results.size
 

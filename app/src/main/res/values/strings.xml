@@ -121,6 +121,10 @@
     <string name="settings_title">Settings</string>
     <string name="settings_backup_section">Backup &amp; Restore</string>
     <string name="settings_backup_info">Export your data to keep it safe. Import data from a backup file to restore your expenses, budgets, and category exclusions.</string>
+    <string name="settings_auto_backup_title">Automatic backup</string>
+    <string name="settings_auto_backup_on">Saves to %1$s whenever your data changes</string>
+    <string name="settings_auto_backup_off">Turn on to back up automatically to %1$s</string>
+    <string name="settings_auto_backup_permission_denied">Storage permission is required to save automatic backups</string>
     <string name="settings_export_title">Export Data</string>
     <string name="settings_export_subtitle">Save expenses, budgets, and exclusions to a backup file</string>
     <string name="settings_export_button">Export</string>

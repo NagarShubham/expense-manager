@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.expensemanager.data.Category
 import com.example.expensemanager.data.CategoryRepository
 import com.example.expensemanager.data.ExpenseRepository
+import com.example.expensemanager.data.toEmojiMap
 import com.example.expensemanager.util.DateUtils
 import com.example.expensemanager.util.PeriodSpendingReport
 import com.example.expensemanager.util.ReportInsights
@@ -52,7 +53,7 @@ internal data class ReportsUiState(
     val report: PeriodSpendingReport = PeriodSpendingReport.Empty,
     val categories: List<Category> = emptyList()
 ) {
-    val categoryEmojiMap: Map<String, String> by lazy { categories.associate { it.name to it.emoji } }
+    val categoryEmojiMap: Map<String, String> by lazy { categories.toEmojiMap() }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

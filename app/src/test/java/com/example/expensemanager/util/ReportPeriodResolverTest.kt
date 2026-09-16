@@ -64,7 +64,6 @@ class ReportPeriodResolverTest {
         )
 
         assertThat(resolved).isNull()
-        assertThat(ReportPeriodResolver.isStartAfterEnd(start, end)).isTrue()
     }
 
     @Test

@@ -69,11 +69,6 @@ internal object ReportPeriodResolver {
         }
     }
 
-    internal fun isStartAfterEnd(
-        startMillis: Long,
-        endMillis: Long
-    ): Boolean = startMillis > endMillis
-
     internal fun resolveInclusive(
         start: YearMonth,
         end: YearMonth
