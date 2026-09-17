@@ -1,5 +1,6 @@
 package com.example.expensemanager.ui.screen
 
+import android.Manifest
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +78,7 @@ internal fun SettingsScreen(
     val expenseCount by viewModel.expenseCount.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val isBiometricLockEnabled by viewModel.isBiometricLockEnabled.collectAsState()
+    val isAutoBackupEnabled by viewModel.isAutoBackupEnabled.collectAsState()
     val activity = context as? ComponentActivity
     val biometricLockHandle = LocalBiometricLockHandle.current
 
@@ -113,6 +114,23 @@ internal fun SettingsScreen(
                         )
                     }
                 }
+            }
+        } finally {
+            biometricLockHandle.endExternalFlow()
+        }
+    }
+
+    // Legacy storage permission - only ever requested on API 26-28, where writing into
+    // the public Downloads folder still goes through the filesystem. On API 29+ the
+    // MediaStore path needs no permission and this launcher is never used.
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        try {
+            if (granted) {
+                viewModel.setAutoBackupEnabled(true)
+            } else {
+                context.showToast(resources.getString(R.string.settings_auto_backup_permission_denied))
             }
         } finally {
             biometricLockHandle.endExternalFlow()
@@ -266,6 +284,29 @@ internal fun SettingsScreen(
 
                 SettingsSection(title = stringResource(R.string.settings_backup_section)) {
                     SettingsGroupCard {
+                        SettingsSwitchRow(
+                            iconEmoji = "🔄",
+                            iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            title = stringResource(R.string.settings_auto_backup_title),
+                            subtitle = stringResource(
+                                if (isAutoBackupEnabled) {
+                                    R.string.settings_auto_backup_on
+                                } else {
+                                    R.string.settings_auto_backup_off
+                                },
+                                viewModel.autoBackupLocation
+                            ),
+                            checked = isAutoBackupEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && viewModel.isStoragePermissionNeeded()) {
+                                    biometricLockHandle.beginExternalFlow()
+                                    storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                } else {
+                                    viewModel.setAutoBackupEnabled(enabled)
+                                }
+                            },
+                            showDivider = true
+                        )
                         SettingsActionRow(
                             iconResId = R.drawable.ic_upload,
                             iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -452,7 +493,7 @@ private fun SettingsExportConfirmDialog(
         text = {
             Column {
                 Text(stringResource(R.string.settings_export_confirm_message))
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
+                Spacer(modifier = Modifier.height(AppSpacing.small))
                 Text(
                     text = stringResource(R.string.settings_export_count_message, expenseCount),
                     style = MaterialTheme.typography.bodyMedium,
@@ -504,7 +545,7 @@ private fun SettingsImportOptionsDialog(
                     text = stringResource(R.string.settings_import_options_message),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+                Spacer(modifier = Modifier.height(AppSpacing.default))
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = if (replaceExisting) {
@@ -518,14 +559,14 @@ private fun SettingsImportOptionsDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(dimensionResource(R.dimen.spacing_small)),
+                            .padding(AppSpacing.small),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
                             checked = replaceExisting,
                             onCheckedChange = onReplaceExistingChange
                         )
-                        Column(modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_small))) {
+                        Column(modifier = Modifier.padding(start = AppSpacing.small)) {
                             Text(
                                 text = stringResource(R.string.settings_import_replace_option),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -594,7 +635,7 @@ private fun SettingsImportConfirmDialog(
                     }
                 )
                 if (replaceExisting) {
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
+                    Spacer(modifier = Modifier.height(AppSpacing.small))
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
@@ -605,7 +646,7 @@ private fun SettingsImportConfirmDialog(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(dimensionResource(R.dimen.spacing_small))
+                            modifier = Modifier.padding(AppSpacing.small)
                         )
                     }
                 }

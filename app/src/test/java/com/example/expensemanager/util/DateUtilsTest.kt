@@ -95,6 +95,28 @@ class DateUtilsTest {
     }
 
     @Test
+    fun formatMonthYear_namesTheRequestedMonthOnEveryDayOfTheMonth() {
+        // Regression: the formatter used to seed its calendar with "now" and then
+        // overwrite only MONTH/YEAR, so a lenient Calendar rolled a non-existent day
+        // into the next month — on the 31st, February formatted as "March".
+        // Nothing here depends on the current date any more.
+        val previousDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.ENGLISH)
+            val expected = listOf(
+                "January 2024", "February 2024", "March 2024", "April 2024",
+                "May 2024", "June 2024", "July 2024", "August 2024",
+                "September 2024", "October 2024", "November 2024", "December 2024"
+            )
+            expected.forEachIndexed { month, label ->
+                assertThat(DateUtils.formatMonthYear(month = month, year = 2024)).isEqualTo(label)
+            }
+        } finally {
+            Locale.setDefault(previousDefault)
+        }
+    }
+
+    @Test
     fun yearMonthFrom_readsLocalCalendarMonthAndYear() {
         val calendar = Calendar.getInstance().apply {
             set(2024, Calendar.AUGUST, 13, 10, 0, 0)

@@ -7,6 +7,16 @@
         android:name="android.permission.USE_FINGERPRINT"
         android:maxSdkVersion="27" />
 
+    <!--
+        Auto-backup writes into the public Download/Expense Manager folder.
+        On API 29+ that goes through MediaStore and needs no permission at all;
+        only API 26-28 (pre-scoped-storage) needs the legacy write permission,
+        hence maxSdkVersion="28".
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <application
         android:name=".ExpenseManagerApplication"
         android:allowBackup="true"
@@ -27,6 +37,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Remove WorkManager's default androidx.startup initializer so it is created
+            on demand instead of on every cold start. ExpenseManagerApplication supplies
+            the configuration (and the Hilt worker factory) via Configuration.Provider,
+            which keeps WorkManager's own database off the app-startup critical path.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>

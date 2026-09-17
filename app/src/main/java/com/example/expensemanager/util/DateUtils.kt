@@ -50,14 +50,21 @@ internal object DateUtils {
 
     internal fun formatDate(timestamp: Long): String = dateFormat.get()!!.format(Date(timestamp))
 
+    /**
+     * Formats a 0-based [month] and [year] as e.g. "February 2026".
+     *
+     * The calendar is cleared and anchored to the 1st rather than seeded with "now":
+     * a lenient Calendar rolls an out-of-range day into the next month, so seeding
+     * with today's date printed the wrong month name whenever the current day-of-month
+     * didn't exist in [month] (e.g. on the 31st, February formatted as "March").
+     */
     internal fun formatMonthYear(
         month: Int,
         year: Int
     ): String {
         val calendar = localCalendar.get()!!
-        calendar.timeInMillis = System.currentTimeMillis()
-        calendar.set(Calendar.MONTH, month)
-        calendar.set(Calendar.YEAR, year)
+        calendar.clear()
+        calendar.set(year, month, 1)
         return monthYearFormat.get()!!.format(calendar.time)
     }
 
@@ -92,6 +99,18 @@ internal object DateUtils {
             formatted
         }
     }
+
+    /**
+     * Renders an amount into the format a text field expects: plain digits, and no
+     * trailing ".0" for whole rupees (the common case) so the field reads like
+     * something the user typed rather than a machine value.
+     */
+    internal fun formatAmountForInput(amount: Double): String =
+        if (amount == amount.toLong().toDouble()) {
+            amount.toLong().toString()
+        } else {
+            amount.toString()
+        }
 
     internal fun yearMonthFrom(timestamp: Long): YearMonth {
         val calendar = localCalendar.get()!!

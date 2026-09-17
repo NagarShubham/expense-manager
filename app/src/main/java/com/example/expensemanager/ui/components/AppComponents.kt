@@ -24,8 +24,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -402,6 +404,24 @@ internal fun CircleIconButton(
         content = content
     )
 }
+
+/**
+ * The app's text-field skin: a filled tonal container with no resting border, so a
+ * form reads as a stack of soft chips rather than a grid of outlines. Every
+ * OutlinedTextField in the app shares this rather than re-declaring the same four
+ * colors; the disabled slots keep a read-only dropdown anchor looking identical to an
+ * editable field.
+ */
+@Composable
+internal fun appTextFieldColors(): TextFieldColors =
+    OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = Color.Transparent,
+        disabledBorderColor = Color.Transparent
+    )
 
 /** Horizontal spacer sized from the app scale. */
 @Composable

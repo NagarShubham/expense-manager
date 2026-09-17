@@ -2,7 +2,6 @@ package com.example.expensemanager.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -19,13 +16,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,12 +37,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.expensemanager.R
@@ -55,12 +48,12 @@ import com.example.expensemanager.ui.components.AppCard
 import com.example.expensemanager.ui.components.AppSpacing
 import com.example.expensemanager.ui.components.CategoryAvatar
 import com.example.expensemanager.ui.components.HSpace
-import com.example.expensemanager.ui.components.HeroGradientCard
-import com.example.expensemanager.ui.components.OverlineText
+import com.example.expensemanager.ui.components.HeroAmountInput
 import com.example.expensemanager.ui.components.SectionHeader
 import com.example.expensemanager.ui.components.VSpace
+import com.example.expensemanager.ui.components.appTextFieldColors
+import com.example.expensemanager.ui.components.sanitizeAmountInput
 import com.example.expensemanager.ui.theme.AppRadius
-import com.example.expensemanager.ui.theme.TabularFigures
 import com.example.expensemanager.ui.theme.appColors
 import com.example.expensemanager.util.DateUtils
 import com.example.expensemanager.util.ExpenseCategories
@@ -92,16 +85,11 @@ private fun BudgetMonthYearDropdown(
             label = { Text(label) },
             shape = AppRadius.chip,
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent
-            ),
+            colors = appTextFieldColors(),
             trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -140,8 +128,8 @@ internal fun BudgetSettingsScreen(
     LaunchedEffect(selectedMonth, selectedYear) {
         amountText = viewModel
             .getExpectedBudgetForMonth(selectedMonth, selectedYear)
-            .takeIf { it != null && it > 0 }
-            ?.toString()
+            ?.takeIf { it > 0 }
+            ?.let { DateUtils.formatAmountForInput(it) }
             .orEmpty()
     }
 
@@ -174,12 +162,10 @@ internal fun BudgetSettingsScreen(
                 .padding(horizontal = AppSpacing.screen)
                 .padding(bottom = AppSpacing.xlarge)
         ) {
-            BudgetAmountHero(
+            HeroAmountInput(
+                label = stringResource(R.string.budget_dialog_hint),
                 amountText = amountText,
-                onAmountChange = { new ->
-                    val filtered = new.filter { c -> c.isDigit() || c == '.' }
-                    if (filtered.count { it == '.' } <= 1) amountText = filtered
-                }
+                onAmountChange = { new -> sanitizeAmountInput(new)?.let { amountText = it } }
             )
 
             VSpace(AppSpacing.default)
@@ -345,51 +331,6 @@ internal fun BudgetSettingsScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-/** The budget amount gets the hero treatment, same as the amount on Add Expense. */
-@Composable
-private fun BudgetAmountHero(
-    amountText: String,
-    onAmountChange: (String) -> Unit
-) {
-    val appColors = MaterialTheme.appColors
-    HeroGradientCard {
-        OverlineText(
-            text = stringResource(R.string.budget_dialog_hint),
-            color = appColors.onHeroMuted
-        )
-        VSpace(AppSpacing.small)
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = stringResource(R.string.currency_symbol),
-                style = MaterialTheme.typography.headlineMedium,
-                color = appColors.onHeroMuted,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            HSpace(AppSpacing.small)
-            Box(modifier = Modifier.weight(1f)) {
-                if (amountText.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.expense_amount_placeholder),
-                        style = MaterialTheme.typography.displaySmall.merge(TabularFigures),
-                        color = appColors.onHero.copy(alpha = 0.4f)
-                    )
-                }
-                BasicTextField(
-                    value = amountText,
-                    onValueChange = onAmountChange,
-                    textStyle = MaterialTheme.typography.displaySmall
-                        .merge(TabularFigures)
-                        .copy(color = appColors.onHero),
-                    singleLine = true,
-                    cursorBrush = SolidColor(appColors.onHero),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
     }

@@ -55,7 +55,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -72,6 +71,7 @@ import com.example.expensemanager.ui.components.AmountText
 import com.example.expensemanager.ui.components.AppBackTopBar
 import com.example.expensemanager.ui.components.AppSpacing
 import com.example.expensemanager.ui.components.CategoryAvatar
+import com.example.expensemanager.ui.components.DeleteConfirmationDialog
 import com.example.expensemanager.ui.components.EmojiPickerBottomSheet
 import com.example.expensemanager.ui.components.EmptyStateMessage
 import com.example.expensemanager.ui.components.HeroGradientCard
@@ -187,36 +187,21 @@ internal fun ManageCategoriesScreen(
         )
     }
 
+    // Same shape as deleting an expense, so it uses the same dialog rather than a
+    // second hand-rolled copy; only the wording differs.
     pendingDelete?.let { category ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text(stringResource(R.string.category_delete_dialog_title)) },
-            text = {
-                Text(stringResource(R.string.category_delete_dialog_message, category.name))
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val toDelete = category
-                    pendingDelete = null
-                    scope.launch {
-                        if (viewModel.deleteCategory(toDelete.name) == CategoryResult.InUse) {
-                            context.showToast(
-                                resources.getString(R.string.category_error_in_use)
-                            )
-                        }
+        DeleteConfirmationDialog(
+            showDialog = true,
+            onDismiss = { pendingDelete = null },
+            onConfirm = {
+                scope.launch {
+                    if (viewModel.deleteCategory(category.name) == CategoryResult.InUse) {
+                        context.showToast(resources.getString(R.string.category_error_in_use))
                     }
-                }) {
-                    Text(
-                        stringResource(R.string.delete_dialog_confirm),
-                        color = MaterialTheme.colorScheme.error
-                    )
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
-                    Text(stringResource(R.string.delete_dialog_cancel))
-                }
-            }
+            title = stringResource(R.string.category_delete_dialog_title),
+            message = stringResource(R.string.category_delete_dialog_message, category.name)
         )
     }
 }
@@ -472,7 +457,7 @@ private fun CategoryEditDialog(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(
-                        dimensionResource(R.dimen.spacing_medium)
+                        AppSpacing.medium
                     )
                 ) {
                     Surface(
@@ -492,7 +477,7 @@ private fun CategoryEditDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_default)))
+                Spacer(modifier = Modifier.height(AppSpacing.default))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },

@@ -11,7 +11,10 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStreamReader
+import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.security.DigestOutputStream
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -64,9 +67,7 @@ internal class BackupManager
         ): Result<String> =
             withContext(Dispatchers.IO) {
                 try {
-                    val backupData = BackupData(
-                        version = CURRENT_VERSION,
-                        totalExpenses = expenses.size,
+                    val backupData = buildBackupData(
                         expenses = expenses,
                         monthlyBudgets = monthlyBudgets,
                         budgetExcludedCategories = budgetExcludedCategories,
@@ -114,6 +115,77 @@ internal class BackupManager
          */
         internal fun generateBackupFileName(): String =
             "expense_backup_${BACKUP_FILE_TIMESTAMP.format(LocalDateTime.now())}.json"
+
+        /**
+         * Filename for an automatic backup. Deliberately a *different* prefix from
+         * [generateBackupFileName] even though the file contents are identical: both kinds
+         * of backup can land in the same folder, and the auto-backup retention sweep must
+         * only ever be able to delete files it wrote itself.
+         */
+        internal fun generateAutoBackupFileName(): String =
+            "$AUTO_BACKUP_FILE_PREFIX${BACKUP_FILE_TIMESTAMP.format(LocalDateTime.now())}.json"
+
+        /**
+         * Fingerprint of the exact payload [exportToJson] would write for this data.
+         *
+         * [BackupData.exportDate] is pinned to [SIGNATURE_EXPORT_DATE] because it changes on
+         * every run; leaving it in would make every comparison a mismatch and defeat the
+         * whole point of change detection. Everything else goes through the same Gson
+         * instance and the same [BackupData] shape as a real export, so the signature tracks
+         * the file's content field-for-field — including any field added to the format later.
+         *
+         * The JSON is streamed straight into the digest rather than built as a String, so
+         * peak memory stays flat no matter how long the expense history is.
+         */
+        internal fun contentSignature(
+            expenses: List<Expense>,
+            monthlyBudgets: List<MonthlyBudget>,
+            budgetExcludedCategories: List<BudgetExcludedCategory>,
+            categories: List<Category>
+        ): String {
+            val digest = MessageDigest.getInstance(SIGNATURE_ALGORITHM)
+            val backupData = buildBackupData(
+                expenses = expenses,
+                monthlyBudgets = monthlyBudgets,
+                budgetExcludedCategories = budgetExcludedCategories,
+                categories = categories,
+                exportDate = SIGNATURE_EXPORT_DATE
+            )
+            OutputStreamWriter(DigestOutputStream(NullOutputStream, digest), Charsets.UTF_8).use { writer ->
+                gson.toJson(backupData, BackupData::class.java, writer)
+            }
+            return digest.digest().joinToString("") { byte ->
+                (byte.toInt() and 0xFF).toString(16).padStart(2, '0')
+            }
+        }
+
+        private fun buildBackupData(
+            expenses: List<Expense>,
+            monthlyBudgets: List<MonthlyBudget>,
+            budgetExcludedCategories: List<BudgetExcludedCategory>,
+            categories: List<Category>,
+            exportDate: Long = System.currentTimeMillis()
+        ): BackupData =
+            BackupData(
+                version = CURRENT_VERSION,
+                exportDate = exportDate,
+                totalExpenses = expenses.size,
+                expenses = expenses,
+                monthlyBudgets = monthlyBudgets,
+                budgetExcludedCategories = budgetExcludedCategories,
+                categories = categories
+            )
+
+        /** Sink for [contentSignature]: the bytes only need to reach the digest, not storage. */
+        private object NullOutputStream : OutputStream() {
+            override fun write(b: Int) = Unit
+
+            override fun write(
+                b: ByteArray,
+                off: Int,
+                len: Int
+            ) = Unit
+        }
 
         private sealed interface LoadOutcome {
             data class Success(val data: BackupData) : LoadOutcome
@@ -181,6 +253,14 @@ internal class BackupManager
 
         companion object {
             const val CURRENT_VERSION = 3
+
+            /** Filename prefix that marks a file as written by the auto-backup worker. */
+            const val AUTO_BACKUP_FILE_PREFIX = "expense_autobackup_"
+
+            private const val SIGNATURE_ALGORITHM = "SHA-256"
+
+            /** Placeholder for the one field that must not influence [contentSignature]. */
+            private const val SIGNATURE_EXPORT_DATE = 0L
 
             private val BACKUP_FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
         }

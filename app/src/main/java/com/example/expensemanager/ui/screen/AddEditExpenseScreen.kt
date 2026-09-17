@@ -2,7 +2,6 @@ package com.example.expensemanager.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,12 +18,11 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.expensemanager.R
@@ -56,12 +52,12 @@ import com.example.expensemanager.ui.components.AppCard
 import com.example.expensemanager.ui.components.AppSpacing
 import com.example.expensemanager.ui.components.CategoryAvatar
 import com.example.expensemanager.ui.components.HSpace
-import com.example.expensemanager.ui.components.HeroGradientCard
-import com.example.expensemanager.ui.components.OverlineText
+import com.example.expensemanager.ui.components.HeroAmountInput
 import com.example.expensemanager.ui.components.SectionHeader
 import com.example.expensemanager.ui.components.VSpace
+import com.example.expensemanager.ui.components.appTextFieldColors
+import com.example.expensemanager.ui.components.sanitizeAmountInput
 import com.example.expensemanager.ui.theme.AppRadius
-import com.example.expensemanager.ui.theme.TabularFigures
 import com.example.expensemanager.ui.theme.appColors
 import com.example.expensemanager.util.DateUtils
 import com.example.expensemanager.util.ExpenseCategories
@@ -108,7 +104,7 @@ internal fun AddEditExpenseScreen(
         expenseId?.let { id ->
             viewModel.getExpenseById(id)?.let { expense ->
                 title = expense.title
-                amount = expense.amount.toString()
+                amount = DateUtils.formatAmountForInput(expense.amount)
                 category = expense.category
                 description = expense.description
                 selectedDate = expense.date
@@ -167,9 +163,10 @@ internal fun AddEditExpenseScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AppSpacing.screen)
         ) {
-            AmountHeroField(
-                amount = amount,
-                onAmountChange = { amount = it }
+            HeroAmountInput(
+                label = stringResource(R.string.expense_field_amount),
+                amountText = amount,
+                onAmountChange = { new -> sanitizeAmountInput(new)?.let { amount = it } }
             )
 
             VSpace(AppSpacing.large)
@@ -185,7 +182,7 @@ internal fun AddEditExpenseScreen(
                     shape = AppRadius.chip,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     singleLine = true,
-                    colors = fieldColors()
+                    colors = appTextFieldColors()
                 )
 
                 VSpace(AppSpacing.medium)
@@ -201,13 +198,13 @@ internal fun AddEditExpenseScreen(
                         readOnly = true,
                         label = { Text(stringResource(R.string.expense_field_category)) },
                         shape = AppRadius.chip,
-                        colors = fieldColors(),
+                        colors = appTextFieldColors(),
                         trailingIcon = {
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         leadingIcon = {
                             CategoryAvatar(
                                 emoji = ExpenseCategories.getCategoryEmoji(category, emojiMap),
@@ -264,7 +261,7 @@ internal fun AddEditExpenseScreen(
                         .fillMaxWidth()
                         .height(120.dp),
                     shape = AppRadius.chip,
-                    colors = fieldColors(),
+                    colors = appTextFieldColors(),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     maxLines = 4
                 )
@@ -289,54 +286,6 @@ internal fun AddEditExpenseScreen(
                 TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         ) { DatePicker(state = datePickerState) }
-    }
-}
-
-/**
- * The amount is the point of this screen, so it gets the hero surface and a
- * display-sized inline field instead of being one text box among five.
- */
-@Composable
-private fun AmountHeroField(
-    amount: String,
-    onAmountChange: (String) -> Unit
-) {
-    val appColors = MaterialTheme.appColors
-    HeroGradientCard {
-        OverlineText(
-            text = stringResource(R.string.expense_field_amount),
-            color = appColors.onHeroMuted
-        )
-        VSpace(AppSpacing.small)
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = stringResource(R.string.currency_symbol),
-                style = MaterialTheme.typography.headlineMedium,
-                color = appColors.onHeroMuted,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            HSpace(AppSpacing.small)
-            Box(modifier = Modifier.weight(1f)) {
-                if (amount.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.expense_amount_placeholder),
-                        style = MaterialTheme.typography.displaySmall.merge(TabularFigures),
-                        color = appColors.onHero.copy(alpha = 0.4f)
-                    )
-                }
-                BasicTextField(
-                    value = amount,
-                    onValueChange = onAmountChange,
-                    textStyle = MaterialTheme.typography.displaySmall
-                        .merge(TabularFigures)
-                        .copy(color = appColors.onHero),
-                    singleLine = true,
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(appColors.onHero),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
     }
 }
 
@@ -407,14 +356,3 @@ private fun SaveExpenseBar(
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    focusedBorderColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-    disabledBorderColor = androidx.compose.ui.graphics.Color.Transparent
-)

@@ -19,3 +19,10 @@ internal data class Category(
     val emoji: String,
     val sortOrder: Int
 )
+
+/**
+ * Name -> emoji lookup, the shape every UI surface wants when resolving a category's
+ * emoji via [ExpenseCategories.getCategoryEmoji]. Defined once here so the four
+ * screens/states that need it don't each re-derive the same association.
+ */
+internal fun List<Category>.toEmojiMap(): Map<String, String> = associate { it.name to it.emoji }

@@ -147,7 +147,10 @@ internal abstract class ExpenseDatabase : RoomDatabase() {
             ExpenseCategories.DEFAULT_CATEGORIES.forEachIndexed { index, (name, emoji) ->
                 db.execSQL(
                     "INSERT OR IGNORE INTO categories (name, emoji, sortOrder) VALUES (?, ?, ?)",
-                    arrayOf(name, emoji, index)
+                    // Explicit Any: without it the array type is inferred as the
+                    // Comparable/Serializable intersection of String and Int, which
+                    // Kotlin warns about (and will reject) when reifying.
+                    arrayOf<Any>(name, emoji, index)
                 )
             }
         }
