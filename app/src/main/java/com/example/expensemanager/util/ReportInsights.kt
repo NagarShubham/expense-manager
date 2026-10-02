@@ -44,15 +44,11 @@ internal object ReportInsights {
         currentYearMonth: YearMonth = ReportPeriodResolver.currentYearMonth()
     ): PeriodSpendingReport {
         val filledMonths = fillMonthlyTotals(monthsInRange, monthlyTotals)
-        val monthCount = filledMonths.size
-        val monthlyAverage = if (monthCount == 0) 0.0 else totalSpending / monthCount
+        val monthlyAverage = if (filledMonths.isEmpty()) 0.0 else totalSpending / filledMonths.size
         val hasExpenses = totalSpending > 0.0 || categoryTotals.isNotEmpty()
-        val currentMonth = filledMonths.find {
-            it.month == currentYearMonth.month && it.year == currentYearMonth.year
-        }
-        val monthsForLowest = filledMonths.filterNot {
-            it.month == currentYearMonth.month && it.year == currentYearMonth.year
-        }
+        val isCurrentMonth = { total: MonthlyTotal -> total.month == currentYearMonth.month && total.year == currentYearMonth.year }
+        val currentMonth = filledMonths.find(isCurrentMonth)
+        val monthsForLowest = filledMonths.filterNot(isCurrentMonth)
         return PeriodSpendingReport(
             totalSpending = totalSpending,
             monthlyAverage = monthlyAverage,
@@ -77,12 +73,6 @@ internal object ReportInsights {
     internal fun pickExtreme(
         months: List<MonthlyTotal>,
         preferMax: Boolean
-    ): MonthlyTotal? {
-        if (months.isEmpty()) return null
-        return if (preferMax) {
-            months.maxByOrNull { it.total }
-        } else {
-            months.minByOrNull { it.total }
-        }
-    }
+    ): MonthlyTotal? =
+        if (preferMax) months.maxByOrNull { it.total } else months.minByOrNull { it.total }
 }

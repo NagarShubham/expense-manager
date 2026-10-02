@@ -13,12 +13,7 @@ class ExpenseManagerApplication :
     @Inject
     internal lateinit var workerFactory: HiltWorkerFactory
 
-    /**
-     * WorkManager is initialised on demand (its default startup provider is removed in
-     * the manifest), so the first `WorkManager.getInstance()` call picks this up instead
-     * of every cold start paying for it. The Hilt factory is what lets
-     * [com.example.expensemanager.backup.AutoBackupWorker] be constructor-injected.
-     */
+    /** On-demand WorkManager init (startup provider removed in manifest), with Hilt worker injection. */
     override val workManagerConfiguration: Configuration
         get() = Configuration
             .Builder()

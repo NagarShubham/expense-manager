@@ -21,7 +21,10 @@ internal object EncryptedPrefs {
     internal fun get(
         context: Context,
         fileName: String
-    ): SharedPreferences = cache.getOrPut(fileName) { create(context.applicationContext, fileName) }
+    ): SharedPreferences =
+        // computeIfAbsent (not the getOrPut extension) so concurrent callers for the same
+        // fileName can't each construct their own EncryptedSharedPreferences instance.
+        cache.computeIfAbsent(fileName) { create(context.applicationContext, fileName) }
 
     private fun create(
         context: Context,

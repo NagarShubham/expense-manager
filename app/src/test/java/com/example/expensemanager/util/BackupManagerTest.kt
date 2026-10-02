@@ -20,7 +20,13 @@ class BackupManagerTest {
     private val uri = mockk<Uri>()
     private val contentResolver = mockk<ContentResolver>()
     private val outputBuffer = ByteArrayOutputStream()
-    private val backupManager = BackupManager(contentResolver)
+    private val backupManager = BackupManager(
+        contentResolver = contentResolver,
+        expenseRepository = mockk(),
+        budgetRepository = mockk(),
+        categoryRepository = mockk(),
+        transactionRunner = { block -> block() }
+    )
 
     @Test
     fun generateBackupFileName_usesExpectedPattern() {

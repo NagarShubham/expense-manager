@@ -72,12 +72,10 @@ class BiometricAuthenticator
             onSuccess: () -> Unit,
             onError: (String) -> Unit,
             onFailed: () -> Unit = {}
-        ) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                showPlatformPrompt(activity, title, subtitle, onSuccess, onError, onFailed)
-            } else {
-                showDeviceCredential(title, subtitle, onSuccess, onError)
-            }
+        ) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            showPlatformPrompt(activity, title, subtitle, onSuccess, onError, onFailed)
+        } else {
+            showDeviceCredential(title, subtitle, onSuccess, onError)
         }
 
         private fun releaseActivityBinding() {

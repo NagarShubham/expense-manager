@@ -105,12 +105,15 @@ internal fun HomeScreen(
             )
         ) {
             item(key = "month_bar", contentType = HomeContentType.MONTH_BAR) {
+                val onPrev = remember(viewModel) { { viewModel.changeMonth(-1) } }
+                val onNext = remember(viewModel) { { viewModel.changeMonth(1) } }
+                val onMonthClick = remember(viewModel) { { viewModel.goToCurrentMonth() } }
                 MonthSelector(
                     month = uiState.selectedMonth,
                     year = uiState.selectedYear,
-                    onPreviousMonth = { viewModel.changeMonth(-1) },
-                    onNextMonth = { viewModel.changeMonth(1) },
-                    onMonthYearClick = { viewModel.goToCurrentMonth() },
+                    onPreviousMonth = onPrev,
+                    onNextMonth = onNext,
+                    onMonthYearClick = onMonthClick,
                     onSearchClick = onSearchClick,
                     onSettingsClick = onSettingsClick
                 )

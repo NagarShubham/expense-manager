@@ -28,23 +28,28 @@ class PreferenceRepository
         private val _isDarkTheme = MutableStateFlow(loadDarkTheme())
         internal val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
-        private val _isBiometricLockEnabled = MutableStateFlow(loadBiometricLockEnabled())
+        private val _isBiometricLockEnabled = MutableStateFlow(prefs.getBoolean(KEY_BIOMETRIC_LOCK, false))
         internal val isBiometricLockEnabled: StateFlow<Boolean> = _isBiometricLockEnabled.asStateFlow()
 
-        internal fun setDarkTheme(enabled: Boolean) {
-            if (_isDarkTheme.value == enabled) return
-            prefs.edit { putBoolean(KEY_DARK_THEME, enabled) }
-            _isDarkTheme.value = enabled
-        }
+        internal fun setDarkTheme(enabled: Boolean) = setBooleanPref(_isDarkTheme, KEY_DARK_THEME, enabled)
 
-        internal fun setBiometricLockEnabled(enabled: Boolean) {
-            if (_isBiometricLockEnabled.value == enabled) return
-            prefs.edit { putBoolean(KEY_BIOMETRIC_LOCK, enabled) }
-            _isBiometricLockEnabled.value = enabled
-        }
+        internal fun setBiometricLockEnabled(enabled: Boolean) =
+            setBooleanPref(_isBiometricLockEnabled, KEY_BIOMETRIC_LOCK, enabled)
 
-        private fun loadBiometricLockEnabled(): Boolean =
-            prefs.getBoolean(KEY_BIOMETRIC_LOCK, false)
+        /**
+         * Persists [enabled] under [key] and pushes it to [flow], skipping both when the
+         * value hasn't actually changed. Shared by every encrypted boolean preference so
+         * each setter is a one-liner.
+         */
+        private fun setBooleanPref(
+            flow: MutableStateFlow<Boolean>,
+            key: String,
+            enabled: Boolean
+        ) {
+            if (flow.value == enabled) return
+            prefs.edit { putBoolean(key, enabled) }
+            flow.value = enabled
+        }
 
         private fun loadDarkTheme(): Boolean {
             if (prefs.contains(KEY_DARK_THEME)) {

@@ -3,9 +3,13 @@ package com.example.expensemanager.util
 import android.content.ContentResolver
 import android.net.Uri
 import com.example.expensemanager.data.BudgetExcludedCategory
+import com.example.expensemanager.data.BudgetRepository
 import com.example.expensemanager.data.Category
+import com.example.expensemanager.data.CategoryRepository
 import com.example.expensemanager.data.Expense
+import com.example.expensemanager.data.ExpenseRepository
 import com.example.expensemanager.data.MonthlyBudget
+import com.example.expensemanager.data.TransactionRunner
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +33,13 @@ import javax.inject.Inject
  */
 internal class BackupManager
     @Inject
-    constructor(private val contentResolver: ContentResolver) {
+    constructor(
+        private val contentResolver: ContentResolver,
+        private val expenseRepository: ExpenseRepository,
+        private val budgetRepository: BudgetRepository,
+        private val categoryRepository: CategoryRepository,
+        private val transactionRunner: TransactionRunner
+    ) {
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
             .create()
@@ -48,12 +58,41 @@ internal class BackupManager
             val categories: List<Category>? = null
         )
 
-        data class BackupImportResult(
+        /**
+         * All backed-up data: produced by [loadSnapshot] (one DB transaction, for export)
+         * and by [importFromJson] (after normalizing a parsed file). One shape serves both
+         * directions since a snapshot and an import result carry identical fields; kept as
+         * a single type rather than two near-duplicate data classes.
+         */
+        data class BackupSnapshot(
             val expenses: List<Expense>,
             val monthlyBudgets: List<MonthlyBudget>,
             val budgetExcludedCategories: List<BudgetExcludedCategory>,
             val categories: List<Category>
-        )
+        ) {
+            val isEmpty: Boolean
+                get() = expenses.isEmpty() &&
+                    monthlyBudgets.isEmpty() &&
+                    budgetExcludedCategories.isEmpty() &&
+                    categories.isEmpty()
+        }
+
+        /**
+         * Reads all four tables in one transaction, so a concurrent write can't produce a
+         * backup mixing data from different moments. Used by manual export and auto-backup.
+         */
+        internal suspend fun loadSnapshot(): BackupSnapshot {
+            lateinit var snapshot: BackupSnapshot
+            transactionRunner {
+                snapshot = BackupSnapshot(
+                    expenses = expenseRepository.getAllExpensesForExport(),
+                    monthlyBudgets = budgetRepository.getAllBudgetsForExport(),
+                    budgetExcludedCategories = budgetRepository.getAllExcludedCategoriesForExport(),
+                    categories = categoryRepository.getAllForExport()
+                )
+            }
+            return snapshot
+        }
 
         /**
          * Exports expenses, monthly budgets, and budget exclusions to a JSON file.
@@ -90,7 +129,7 @@ internal class BackupManager
         /**
          * Imports a backup file. Supports v1 (expenses only) and v2 (expenses + budgets + exclusions).
          */
-        internal suspend fun importFromJson(uri: Uri): Result<BackupImportResult> =
+        internal suspend fun importFromJson(uri: Uri): Result<BackupSnapshot> =
             withContext(Dispatchers.IO) {
                 try {
                     when (val outcome = loadBackup(uri, ioFailureMessage = "Unable to open input stream")) {
@@ -98,10 +137,10 @@ internal class BackupManager
                         is LoadOutcome.ParseFailure -> Result.failure(Exception("Invalid backup file format"))
                         is LoadOutcome.Success -> {
                             val normalized = normalize(outcome.data)
-                            if (!normalized.hasImportableData()) {
+                            if (normalized.isEmpty) {
                                 return@withContext Result.failure(Exception("No data found in backup file"))
                             }
-                            Result.success(normalized.toImportResult())
+                            Result.success(normalized)
                         }
                     }
                 } catch (e: Exception) {
@@ -116,26 +155,13 @@ internal class BackupManager
         internal fun generateBackupFileName(): String =
             "expense_backup_${BACKUP_FILE_TIMESTAMP.format(LocalDateTime.now())}.json"
 
-        /**
-         * Filename for an automatic backup. Deliberately a *different* prefix from
-         * [generateBackupFileName] even though the file contents are identical: both kinds
-         * of backup can land in the same folder, and the auto-backup retention sweep must
-         * only ever be able to delete files it wrote itself.
-         */
+        /** Distinct prefix from manual backups so the retention sweep only deletes its own files. */
         internal fun generateAutoBackupFileName(): String =
             "$AUTO_BACKUP_FILE_PREFIX${BACKUP_FILE_TIMESTAMP.format(LocalDateTime.now())}.json"
 
         /**
-         * Fingerprint of the exact payload [exportToJson] would write for this data.
-         *
-         * [BackupData.exportDate] is pinned to [SIGNATURE_EXPORT_DATE] because it changes on
-         * every run; leaving it in would make every comparison a mismatch and defeat the
-         * whole point of change detection. Everything else goes through the same Gson
-         * instance and the same [BackupData] shape as a real export, so the signature tracks
-         * the file's content field-for-field — including any field added to the format later.
-         *
-         * The JSON is streamed straight into the digest rather than built as a String, so
-         * peak memory stays flat no matter how long the expense history is.
+         * SHA-256 of the payload [exportToJson] would write, with `exportDate` pinned so only
+         * data changes affect it. Streamed into the digest to keep memory flat.
          */
         internal fun contentSignature(
             expenses: List<Expense>,
@@ -195,27 +221,6 @@ internal class BackupManager
             data object ParseFailure : LoadOutcome
         }
 
-        private data class NormalizedBackup(
-            val expenses: List<Expense>,
-            val monthlyBudgets: List<MonthlyBudget>,
-            val budgetExcludedCategories: List<BudgetExcludedCategory>,
-            val categories: List<Category>
-        ) {
-            fun hasImportableData(): Boolean =
-                expenses.isNotEmpty() ||
-                    monthlyBudgets.isNotEmpty() ||
-                    budgetExcludedCategories.isNotEmpty() ||
-                    categories.isNotEmpty()
-
-            fun toImportResult(): BackupImportResult =
-                BackupImportResult(
-                    expenses = expenses,
-                    monthlyBudgets = monthlyBudgets,
-                    budgetExcludedCategories = budgetExcludedCategories,
-                    categories = categories
-                )
-        }
-
         private fun loadBackup(uri: Uri, ioFailureMessage: String): LoadOutcome =
             try {
                 val backupData =
@@ -230,8 +235,9 @@ internal class BackupManager
                 LoadOutcome.ParseFailure
             }
 
-        private fun normalize(backupData: BackupData): NormalizedBackup =
-            NormalizedBackup(
+        /** Fills in v1/v2 backups that omit later fields with empty lists, so old files still import. */
+        private fun normalize(backupData: BackupData): BackupSnapshot =
+            BackupSnapshot(
                 expenses = backupData.expenses.orEmpty(),
                 monthlyBudgets = backupData.monthlyBudgets.orEmpty(),
                 budgetExcludedCategories = backupData.budgetExcludedCategories.orEmpty(),
@@ -242,14 +248,11 @@ internal class BackupManager
             expenseCount: Int,
             budgetCount: Int,
             exclusionCount: Int
-        ): String {
-            val parts = buildList {
-                if (expenseCount > 0) add("$expenseCount expenses")
-                if (budgetCount > 0) add("$budgetCount budgets")
-                if (exclusionCount > 0) add("$exclusionCount category exclusions")
-            }
-            return "Successfully exported ${parts.joinToString(", ")}"
-        }
+        ): String = buildList {
+            if (expenseCount > 0) add("$expenseCount expenses")
+            if (budgetCount > 0) add("$budgetCount budgets")
+            if (exclusionCount > 0) add("$exclusionCount category exclusions")
+        }.joinToString(", ", prefix = "Successfully exported ")
 
         companion object {
             const val CURRENT_VERSION = 3

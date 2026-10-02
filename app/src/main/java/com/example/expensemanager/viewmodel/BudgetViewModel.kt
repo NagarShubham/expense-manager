@@ -29,40 +29,29 @@ internal class BudgetViewModel
             month: Int,
             year: Int,
             expectedAmount: Double
-        ) = insertBudget(month, year, expectedAmount)
+        ) = withContext(Dispatchers.IO) {
+            budgetRepository.insertOrUpdateBudget(MonthlyBudget(month = month, year = year, expectedAmount = expectedAmount))
+        }
 
         internal fun clearMonthlyBudget(
             month: Int,
             year: Int
-        ) {
-            viewModelScope.launch(Dispatchers.IO) {
-                budgetRepository.deleteBudgetByMonthYear(month, year)
-            }
-        }
+        ) = launchIo { budgetRepository.deleteBudgetByMonthYear(month, year) }
 
         internal fun setCategoryExcludedFromBudget(
             month: Int,
             year: Int,
             category: String,
             excluded: Boolean
-        ) {
-            viewModelScope.launch(Dispatchers.IO) {
-                budgetRepository.setCategoryExcluded(month, year, category, excluded)
-            }
+        ) = launchIo { budgetRepository.setCategoryExcluded(month, year, category, excluded) }
+
+        /** Fire-and-forget IO write launched on [viewModelScope]. */
+        private inline fun launchIo(crossinline block: suspend () -> Unit) {
+            viewModelScope.launch(Dispatchers.IO) { block() }
         }
 
         internal fun getExcludedByMonthYear(
             month: Int,
             year: Int
         ): Flow<List<String>> = budgetRepository.getExcludedCategoriesByMonthYear(month, year)
-
-        private suspend fun insertBudget(
-            month: Int,
-            year: Int,
-            expectedAmount: Double
-        ) = withContext(Dispatchers.IO) {
-            budgetRepository.insertOrUpdateBudget(
-                MonthlyBudget(month = month, year = year, expectedAmount = expectedAmount)
-            )
-        }
     }
