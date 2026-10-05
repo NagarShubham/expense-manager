@@ -89,7 +89,10 @@ internal fun AddEditExpenseScreen(
 
     val scope = rememberCoroutineScope()
     val isEditMode = expenseId != null
-    val isValid = title.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
+    // Parsed once per recomposition and reused for both validation and save, rather
+    // than re-parsing the amount string twice.
+    val parsedAmount = amount.toDoubleOrNull()
+    val isValid = title.isNotBlank() && (parsedAmount ?: 0.0) > 0
 
     // Default the picker to the first category once the list loads (add mode only, once).
     LaunchedEffect(categories) {
@@ -134,7 +137,7 @@ internal fun AddEditExpenseScreen(
                 enabled = isValid,
                 onClick = {
                     scope.launch {
-                        amount.toDoubleOrNull()?.let { amountValue ->
+                        parsedAmount?.let { amountValue ->
                             val expense = Expense(
                                 id = expenseId ?: 0,
                                 title = title.trim(),

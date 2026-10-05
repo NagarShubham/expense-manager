@@ -121,8 +121,10 @@ internal fun BudgetSettingsScreen(
     var showMonthMenu by remember { mutableStateOf(false) }
     var showYearMenu by remember { mutableStateOf(false) }
 
-    val monthOptions = remember { 0..11 }
-    val yearRange = remember(currentYear) { (currentYear - 2)..(currentYear + 1) }
+    // Plain IntRanges are cheap value types — remember() would only add bookkeeping
+    // overhead without any caching benefit here.
+    val monthOptions = 0..11
+    val yearRange = (currentYear - 2)..(currentYear + 1)
 
     // One-shot load of the expected amount when the month/year changes.
     LaunchedEffect(selectedMonth, selectedYear) {

@@ -81,13 +81,7 @@ internal fun AppCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(role = Role.Button, onClick = onClick)
-                } else {
-                    Modifier
-                }
-            ),
+            .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier),
         shape = shape,
         color = containerColor
     ) {

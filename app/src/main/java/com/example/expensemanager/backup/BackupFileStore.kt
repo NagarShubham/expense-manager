@@ -19,18 +19,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Creates, publishes and prunes the auto-backup files in the public
- * `Download/Expense Manager` folder.
- *
- * Two storage worlds are hidden behind one API: API 29+ goes through MediaStore (no
- * permission needed, and the file is created `IS_PENDING` so a half-written backup is never
- * visible to other apps), while API 26-28 writes an ordinary file and needs the legacy
- * storage grant. The public Downloads folder is deliberate - backups must outlive
- * uninstalling the app, which app-private storage would not.
- *
- * Every method swallows its failures and reports them as `null`/`false`/no-op rather than
- * throwing: a backup that cannot be written is the worker's business to retry, and must
- * never surface as a crash.
+ * Auto-backup files in public `Download/Expense Manager` (survives uninstall). API 29+ uses
+ * MediaStore with no permission; API 26-28 needs the legacy storage grant. Never throws.
  */
 @Singleton
 internal class BackupFileStore
@@ -39,7 +29,7 @@ internal class BackupFileStore
         @ApplicationContext private val context: Context,
         private val contentResolver: ContentResolver
     ) {
-        /** Whether a backup could be written right now, ignoring whether anything needs writing. */
+        /** Whether a backup could be written right now. */
         internal fun isWritable(): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 true
@@ -55,10 +45,7 @@ internal class BackupFileStore
                     android.Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ) == PackageManager.PERMISSION_GRANTED
 
-        /**
-         * Reserves a file to write into, or `null` if one could not be created. The returned
-         * [Target] must be handed to exactly one of [publish] or [discard].
-         */
+        /** Reserves a file, or `null`. Pass the result to exactly one of [publish] or [discard]. */
         internal fun create(fileName: String): Target? =
             runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -68,20 +55,19 @@ internal class BackupFileStore
                 }
             }.getOrNull()
 
-        /** Makes a fully written file visible to other apps. */
-        internal fun publish(target: Target) {
-            if (!target.pending || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        /** Makes a written file visible; false means the caller should [discard] it. */
+        internal fun publish(target: Target): Boolean = !target.pending ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
             runCatching {
                 contentResolver.update(
                     target.uri,
                     ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
                     null,
                     null
-                )
-            }
-        }
+                ) > 0
+            }.getOrDefault(false)
 
-        /** Removes a file whose write failed, so a partial backup is never left behind. */
+        /** Deletes a partially written file. */
         internal fun discard(target: Target) {
             runCatching {
                 if (target.uri.scheme == ContentResolver.SCHEME_FILE) {
@@ -92,10 +78,7 @@ internal class BackupFileStore
             }
         }
 
-        /**
-         * Whether the last backup is still there. The user can delete files from Downloads at
-         * any time, so a matching content signature alone is not enough to skip a backup.
-         */
+        /** Whether the file still exists (the user may have deleted it). */
         internal fun exists(uriString: String?): Boolean {
             val uri = uriString?.takeIf { it.isNotEmpty() }?.toUri() ?: return false
             return runCatching {

@@ -22,22 +22,13 @@ internal object SecureKeyGenerator {
      * Passphrase is stored securely using EncryptedSharedPreferences
      * Cached in memory for performance
      */
-    internal fun getOrGenerateKey(context: Context): String {
-        // Return cached passphrase if available
-        cachedPassphrase?.let { return it }
+    internal fun getOrGenerateKey(context: Context): String =
+        cachedPassphrase ?: (getStoredPassphrase(context) ?: generateAndStore(context))
+            .also { cachedPassphrase = it }
 
-        // Try to get existing passphrase from storage
-        getStoredPassphrase(context)?.let {
-            cachedPassphrase = it
-            return it
-        }
-
-        // Generate new passphrase if none exists
-        val newPassphrase = generateSecurePassphrase()
-        storePassphrase(context, newPassphrase)
-        cachedPassphrase = newPassphrase
-        return newPassphrase
-    }
+    /** Generates a new passphrase and persists it; only called when storage has none yet. */
+    private fun generateAndStore(context: Context): String =
+        generateSecurePassphrase().also { storePassphrase(context, it) }
 
     /**
      * Generates a cryptographically secure random 256-bit passphrase

@@ -110,22 +110,15 @@ internal class ExpenseViewModel
             selectedMonthYearFlow.value = month to year
         }
 
-        internal fun insertExpense(expense: Expense) {
-            viewModelScope.launch(Dispatchers.IO) {
-                expenseRepository.insertExpense(expense)
-            }
-        }
+        internal fun insertExpense(expense: Expense) = launchIo { expenseRepository.insertExpense(expense) }
 
-        internal fun updateExpense(expense: Expense) {
-            viewModelScope.launch(Dispatchers.IO) {
-                expenseRepository.updateExpense(expense)
-            }
-        }
+        internal fun updateExpense(expense: Expense) = launchIo { expenseRepository.updateExpense(expense) }
 
-        internal fun deleteExpense(expense: Expense) {
-            viewModelScope.launch(Dispatchers.IO) {
-                expenseRepository.deleteExpense(expense)
-            }
+        internal fun deleteExpense(expense: Expense) = launchIo { expenseRepository.deleteExpense(expense) }
+
+        /** Fire-and-forget IO work launched on [viewModelScope]; keeps the CRUD methods above one-liners. */
+        private inline fun launchIo(crossinline block: suspend () -> Unit) {
+            viewModelScope.launch(Dispatchers.IO) { block() }
         }
 
         internal suspend fun getExpenseById(id: Long): Expense? =
@@ -154,16 +147,15 @@ internal class ExpenseViewModel
                 categories: List<Category>
             ): ExpenseUiState {
                 val excluded = excludedList.toSet()
+                // Single pass over the list: totals-by-category, grand total, and the excluded-sum
+                // are all accumulated together, avoiding three separate Room queries or traversals.
                 val totalsByCategory = LinkedHashMap<String, Double>()
                 var totalAmount = 0.0
                 var excludedSum = 0.0
                 for (expense in expenses) {
                     totalAmount += expense.amount
-                    totalsByCategory[expense.category] =
-                        (totalsByCategory[expense.category] ?: 0.0) + expense.amount
-                    if (expense.category in excluded) {
-                        excludedSum += expense.amount
-                    }
+                    totalsByCategory.merge(expense.category, expense.amount, Double::plus)
+                    if (expense.category in excluded) excludedSum += expense.amount
                 }
                 val categoryTotals =
                     totalsByCategory

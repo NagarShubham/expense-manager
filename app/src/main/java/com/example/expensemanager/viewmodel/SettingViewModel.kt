@@ -1,34 +1,24 @@
 package com.example.expensemanager.viewmodel
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.expensemanager.backup.AutoBackupStore
-import com.example.expensemanager.backup.AutoBackupWorker
 import com.example.expensemanager.backup.BackupFileStore
-import com.example.expensemanager.data.BudgetExcludedCategory
 import com.example.expensemanager.data.BudgetRepository
-import com.example.expensemanager.data.Category
 import com.example.expensemanager.data.CategoryRepository
-import com.example.expensemanager.data.Expense
 import com.example.expensemanager.data.ExpenseRepository
-import com.example.expensemanager.data.MonthlyBudget
 import com.example.expensemanager.data.PreferenceRepository
 import com.example.expensemanager.data.TransactionRunner
 import com.example.expensemanager.util.BackupManager
-import com.example.expensemanager.util.BackupManager.BackupImportResult
+import com.example.expensemanager.util.BackupManager.BackupSnapshot
 import com.example.expensemanager.util.BiometricAuthenticator
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -44,10 +34,7 @@ internal class SettingViewModel
         private val transactionRunner: TransactionRunner,
         private val biometricAuthenticator: BiometricAuthenticator,
         private val autoBackupStore: AutoBackupStore,
-        private val backupFileStore: BackupFileStore,
-        // Application context only: needed to reach WorkManager, never retained as a View
-        // or Activity reference.
-        @ApplicationContext private val appContext: Context
+        private val backupFileStore: BackupFileStore
     ) : ViewModel() {
         internal val expenseCount: StateFlow<Int> = expenseRepository.getExpenseCount()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -56,19 +43,8 @@ internal class SettingViewModel
         internal val isBiometricAvailable: Boolean = biometricAuthenticator.canAuthenticate()
         internal val isAutoBackupEnabled: StateFlow<Boolean> = autoBackupStore.isEnabled
 
-        /** Process-lifetime scope, so enqueueing survives leaving the Settings screen. */
-        private val autoBackupScope = autoBackupStore.backgroundScope
-
         /** Where automatic backups land, e.g. `Download/Expense Manager`. */
         internal val autoBackupLocation: String = BackupFileStore.DISPLAY_LOCATION
-
-        /** Aggregates everything gathered for an export before handing it to [BackupManager]. */
-        private data class ExportData(
-            val expenses: List<Expense>,
-            val monthlyBudgets: List<MonthlyBudget>,
-            val budgetExcludedCategories: List<BudgetExcludedCategory>,
-            val categories: List<Category>
-        )
 
         /**
          * Exports expenses, budgets, and budget exclusions to a JSON file.
@@ -77,24 +53,10 @@ internal class SettingViewModel
          */
         internal suspend fun exportData(uri: Uri): Result<String> = withContext(Dispatchers.IO) {
             try {
-                val export = coroutineScope {
-                    val expensesDeferred = async { expenseRepository.getAllExpensesForExport() }
-                    val budgetsDeferred = async { budgetRepository.getAllBudgetsForExport() }
-                    val exclusionsDeferred = async { budgetRepository.getAllExcludedCategoriesForExport() }
-                    val categoriesDeferred = async { categoryRepository.getAllForExport() }
-                    ExportData(
-                        expenses = expensesDeferred.await(),
-                        monthlyBudgets = budgetsDeferred.await(),
-                        budgetExcludedCategories = exclusionsDeferred.await(),
-                        categories = categoriesDeferred.await()
-                    )
-                }
+                // Same consistent, single-transaction snapshot the auto-backup worker uses.
+                val export = backupManager.loadSnapshot()
 
-                if (export.expenses.isEmpty() &&
-                    export.monthlyBudgets.isEmpty() &&
-                    export.budgetExcludedCategories.isEmpty() &&
-                    export.categories.isEmpty()
-                ) {
+                if (export.isEmpty) {
                     return@withContext Result.failure(Exception("No data to export"))
                 }
 
@@ -120,7 +82,7 @@ internal class SettingViewModel
         internal suspend fun importData(
             uri: Uri,
             replaceExisting: Boolean = false
-        ): Result<BackupImportResult> =
+        ): Result<BackupSnapshot> =
             withContext(Dispatchers.IO) {
                 try {
                     val importResult = backupManager.importFromJson(uri)
@@ -166,35 +128,12 @@ internal class SettingViewModel
 
         internal fun generateBackupFileName() = backupManager.generateBackupFileName()
 
-        /**
-         * True when enabling automatic backup still needs the legacy storage grant. Always
-         * false on API 29+, where MediaStore writes need no permission at all.
-         */
+        /** True when auto-backup needs the legacy storage grant (API 26-28 only). */
         internal fun isStoragePermissionNeeded(): Boolean = !backupFileStore.hasLegacyWritePermission()
 
-        /**
-         * Turns automatic backup on/off and syncs the WorkManager schedule. Enabling resets
-         * change tracking and kicks off one immediate run, so the user isn't waiting up to a day.
-         *
-         * No "already in that state" guard on purpose: a recomposition may call this twice with
-         * the same value, and an early return would skip scheduling. Re-running is safe —
-         * `setEnabled` no-ops on an unchanged value and the WorkManager calls are idempotent.
-         *
-         * On [autoBackupScope], not `viewModelScope`: leaving Settings clears the ViewModel and
-         * would cancel the enqueue before the schedule is created.
-         */
+        /** Turns auto-backup on/off; see [AutoBackupStore.setEnabled]. */
         internal fun setAutoBackupEnabled(enabled: Boolean) {
             autoBackupStore.setEnabled(enabled)
-            if (enabled) {
-                autoBackupStore.resetChangeTracking()
-            }
-            // WorkManager calls touch its own database, so they stay off the main thread.
-            autoBackupScope.launch(Dispatchers.Default) {
-                AutoBackupWorker.sync(appContext, enabled)
-                if (enabled) {
-                    AutoBackupWorker.runNow(appContext)
-                }
-            }
         }
 
         internal fun setDarkTheme(enabled: Boolean) {

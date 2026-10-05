@@ -14,7 +14,5 @@ import javax.inject.Singleton
 internal object AppModule {
     @Provides
     @Singleton
-    internal fun provideContentResolver(
-        @ApplicationContext context: Context
-    ): ContentResolver = context.contentResolver
+    internal fun provideContentResolver(@ApplicationContext context: Context): ContentResolver = context.contentResolver
 }

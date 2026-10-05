@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.example.expensemanager.backup.AutoBackupStore
-import com.example.expensemanager.backup.AutoBackupWorker
 import com.example.expensemanager.data.PreferenceRepository
 import com.example.expensemanager.nav.AddExpenseRoute
 import com.example.expensemanager.nav.AllCategoriesRoute
@@ -42,8 +41,6 @@ import com.example.expensemanager.ui.theme.ExpenseManagerTheme
 import com.example.expensemanager.util.BiometricAuthenticator
 import com.example.expensemanager.viewmodel.ExpenseViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -85,21 +82,9 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    /**
-     * Started here, not in `Application`: data only changes while there is UI, and a worker-only
-     * process wake must not open the encrypted database just to watch for writes that can't happen.
-     *
-     * Both calls are idempotent (a config change re-running them is harmless) and doubles as the
-     * repair path: with `ExistingPeriodicWorkPolicy.UPDATE`, a launch re-creates the schedule if
-     * it went missing. Off the main thread because `WorkManager.getInstance()` builds WorkManager
-     * on first use; on the store's process-lifetime scope so a fast onCreate→onDestroy (rotation,
-     * biometric gate) can't cancel the enqueue before it lands.
-     */
+    /** Restores a lost auto-backup schedule on launch. Here, not in `Application`, so worker-only wakes skip it. */
     private fun startAutoBackup() {
-        autoBackupStore.startObservingDatabase()
-        autoBackupStore.backgroundScope.launch(Dispatchers.Default) {
-            AutoBackupWorker.sync(applicationContext, autoBackupStore.isEnabled.value)
-        }
+        autoBackupStore.ensureScheduled()
     }
 
     @Composable

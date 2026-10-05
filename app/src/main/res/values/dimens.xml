@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Spacing -->
-    <dimen name="spacing_small">8.dp</dimen>
-    <dimen name="spacing_medium">12.dp</dimen>
-    <dimen name="spacing_default">16.dp</dimen>
-</resources>

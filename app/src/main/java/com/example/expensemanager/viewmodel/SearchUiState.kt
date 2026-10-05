@@ -58,7 +58,8 @@ internal class SearchViewModel
     ) : ViewModel() {
         /**
          * The live filter. Text edits and control changes share one flow so a single
-         * downstream query serves both; only the text needs debouncing.
+         * downstream query serves both; text and amount inputs are debounced so every
+         * keystroke doesn't trigger a Room query.
          */
         private val filterFlow = MutableStateFlow(ExpenseFilter())
 
@@ -72,9 +73,12 @@ internal class SearchViewModel
         internal val uiState: StateFlow<SearchUiState> =
             combine(
                 filterFlow
-                    // Only the free-text field is debounced; toggling a category or sort
-                    // should feel immediate, and those arrive on this same flow.
-                    .debounce { filter -> if (filter.query.isBlank()) 0L else QUERY_DEBOUNCE_MS }
+                    .debounce { filter ->
+                        when {
+                            filter.query.isBlank() && filter.minAmount == null && filter.maxAmount == null -> 0L
+                            else -> QUERY_DEBOUNCE_MS
+                        }
+                    }
                     .distinctUntilChanged()
                     .flatMapLatest { filter ->
                         expenseRepository.searchExpenses(filter).map { results -> filter to results }
