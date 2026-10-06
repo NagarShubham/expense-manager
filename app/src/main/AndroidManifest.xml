@@ -8,7 +8,7 @@
         android:maxSdkVersion="27" />
 
     <!--
-        Auto-backup writes into the public Download/Expense Manager folder.
+        Auto-backup writes into the public Download/Expense Tracker folder.
         On API 29+ that goes through MediaStore and needs no permission at all;
         only API 26-28 (pre-scoped-storage) needs the legacy write permission,
         hence maxSdkVersion="28".
@@ -18,7 +18,7 @@
         android:maxSdkVersion="28" />
 
     <application
-        android:name=".ExpenseManagerApplication"
+        android:name=".ExpenseTrackerApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -26,11 +26,11 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ExpenseManager">
+        android:theme="@style/Theme.ExpenseTracker">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.ExpenseManager">
+            android:theme="@style/Theme.ExpenseTracker">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -40,7 +40,7 @@
 
         <!--
             Remove WorkManager's default androidx.startup initializer so it is created
-            on demand instead of on every cold start. ExpenseManagerApplication supplies
+            on demand instead of on every cold start. ExpenseTrackerApplication supplies
             the configuration (and the Hilt worker factory) via Configuration.Provider,
             which keeps WorkManager's own database off the app-startup critical path.
         -->

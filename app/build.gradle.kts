@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.expensemanager"
+    namespace = "com.snagar.expensetracker"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.expancemanager"
+        applicationId = "com.snagar.expensetracker"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -65,7 +65,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.api.ApkVariantOutput
-            output.outputFileName = "Expense-${variant.versionName}-${variant.buildType.name}.apk"
+            output.outputFileName = "ExpenseTracker-${variant.versionName}-${variant.buildType.name}.apk"
         }
     }
 }
