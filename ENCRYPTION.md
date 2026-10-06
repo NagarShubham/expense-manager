@@ -1,263 +1,110 @@
-# 🔐 Database Encryption Implementation
+# Database encryption
 
-## Overview
+This app uses **SQLCipher** so Room data is encrypted at rest. There is no account and no network sync.
 
-This app uses **SQLCipher** for transparent database encryption, ensuring all your financial data is protected at rest with bank-level security.
+## What’s in place
 
-## Security Features
+| | |
+| --- | --- |
+| Algorithm | AES-256 (SQLCipher) |
+| Library | [sqlcipher-android](https://github.com/sqlcipher/sqlcipher-android) **4.6.1** |
+| Passphrase | 256-bit random value, Base64-encoded |
+| Passphrase storage | `EncryptedSharedPreferences` (`secure_expense_prefs`) via `EncryptedPrefs` |
+| Master key | Android Keystore, `MasterKey.KeyScheme.AES256_GCM` |
+| Database file | `expense_database` (Room v7, WAL) |
+| Survives app update | Yes |
+| Survives uninstall / clear data | **No** — the Keystore-backed passphrase is gone |
 
-### 🛡️ Encryption Details
+Theme and biometric-lock flags live in a second encrypted prefs file (`encrypted_app_preferences`). Auto-backup **enablement** is stored in plain `SharedPreferences` (`auto_backup_state`) so the worker can check the toggle without opening SQLCipher.
 
-- **Algorithm**: AES-256 bit encryption (industry standard)
-- **Library**: SQLCipher 4.5.4 (open-source, FIPS 140-2 compliant)
-- **Passphrase Storage**: Android Keystore + EncryptedSharedPreferences
-- **Hardware Security**: Uses device hardware security when available
-- **Performance**: ~5-10% overhead (minimal impact)
-
-### 🔑 Key Management
-
-1. **Generation**: 256-bit cryptographically secure random passphrase
-2. **Storage**: Encrypted using Android's MasterKey (AES256-GCM)
-3. **Location**: EncryptedSharedPreferences (hardware-backed when possible)
-4. **Persistence**: Passphrase survives app updates but NOT app uninstall
-
-## How It Works
+## How it works
 
 ```
-User Data → Room Database → SQLCipher → AES-256 Encryption → Encrypted File
-                                ↑
-                         Secure Passphrase
-                                ↑
-                    Android Keystore Protection
+User data → Room DAOs → SQLCipher (AES-256) → encrypted files on disk
+                              ↑
+                    256-bit passphrase
+                              ↑
+              EncryptedSharedPreferences + Keystore MasterKey
 ```
 
-### Step-by-Step Process
+1. First launch: `SecureKeyGenerator` creates a 256-bit passphrase with `SecureRandom` and stores it through `EncryptedPrefs`.
+2. `ExpenseDatabase.getDatabase()` loads that passphrase, builds a SQLCipher `SupportOpenHelperFactory`, and opens Room as usual.
+3. Later launches reuse the same passphrase (cached in memory after the first decrypt).
 
-1. **First Launch**:
-   - `SecureKeyGenerator` generates a random 256-bit passphrase
-   - Passphrase is stored in `EncryptedSharedPreferences`
-   - Key is backed by Android Keystore (hardware security)
+There are **no hardcoded keys**. A failed read of an existing prefs file is **not** treated as “no key” — that would mint a new passphrase and make the database unreadable.
 
-2. **Database Access**:
-   - `ExpenseDatabase` retrieves passphrase from secure storage
-   - SQLCipher uses passphrase to encrypt/decrypt on-the-fly
-   - All reads/writes are transparent to the app code
+## What is protected
 
-3. **Subsequent Launches**:
-   - Existing passphrase is retrieved and reused
-   - No user interaction needed
-   - Data remains accessible across sessions
+- Expense rows (title, amount, category, description, dates)
+- Monthly budgets and per-month budget exclusions
+- User-managed categories
+- Database indexes and SQLCipher temp/WAL files
+- Theme and biometric-lock preferences
 
-## Security Guarantees
+## What is not
 
-✅ **Data at Rest**: All database files are encrypted  
-✅ **Memory Protection**: SQLCipher handles in-memory encryption  
-✅ **Key Security**: Passphrase stored in hardware-backed keystore  
-✅ **No Hardcoding**: No passphrases in source code  
-✅ **Standard Compliance**: FIPS 140-2 compliant encryption  
+- **Automatic / manual backup JSON** in `Download/Expense Tracker` (or wherever the user saved an export) — plaintext so it still works after uninstall
+- App code (release builds **do** use R8 minify + shrink; see `app/r8-rules.pro`)
+- Screenshots (the app does **not** set `FLAG_SECURE`)
+- Optional biometric lock — a UI gate only; it does not wrap the database
+- Rooted / compromised devices
+- Android Auto Backup / device transfer: `android:allowBackup="true"` and the XML rules files are still the Studio stubs. Cloud backup of an encrypted DB without a restorable Keystore key is not a supported recovery path.
 
-## What's Protected
+## Data recovery
 
-- ✅ All expense records (title, amount, description)
-- ✅ Category information
-- ✅ Date and timestamp data
-- ✅ Database metadata and indexes
-- ✅ Temporary database files
+| Event | Result |
+| --- | --- |
+| App uninstall | Passphrase deleted → local DB unrecoverable |
+| Clear app data | Same |
+| App update | Passphrase kept → DB still opens |
+| Lost device | Data stays encrypted on that device |
 
-## What's NOT Protected
+To keep data across reinstalls, **export from Settings** or turn on **automatic backup**. Those files are unencrypted JSON (backup format v1–v3). Treat them as sensitive.
 
-- ❌ App code (use ProGuard/R8 for obfuscation)
-- ❌ Network traffic (use HTTPS if syncing)
-- ❌ Screenshots (disabled by default in secure apps)
-- ❌ Rooted device attacks (consider root detection)
+`SecureKeyGenerator.clearPassphrase` and `ExpenseDatabase.closeDatabase` **do not exist**. To reset encryption, clear app data or uninstall (this deletes expenses unless you imported from a JSON backup first).
 
-## Data Recovery
+## Code
 
-### ⚠️ Important: No Passphrase = No Data
+| File | Role |
+| --- | --- |
+| `util/EncryptedPrefs.kt` | Shared `MasterKey` + `EncryptedSharedPreferences` cache |
+| `util/SecureKeyGenerator.kt` | Generate / load SQLCipher passphrase |
+| `data/ExpenseDatabase.kt` | SQLCipher `openHelperFactory`, migrations 1→7 |
+| `data/PreferenceRepository.kt` | Encrypted theme / biometric prefs |
+| `app/r8-rules.pro` | Keep SQLCipher, Room entities, Tink / security-crypto |
 
-- **App Uninstall**: Deletes passphrase → data becomes UNRECOVERABLE
-- **Clear App Data**: Deletes passphrase → data becomes UNRECOVERABLE
-- **Lost Device**: Data is safe, but no recovery without device
-- **App Update**: Passphrase persists → data remains accessible
+## Verify the DB is encrypted
 
-### Recovery Strategy
+`applicationId` and the Kotlin namespace are both `com.snagar.expensetracker`. An install that was previously `com.example.expancemanager` is a different app to Android, so its Keystore-backed passphrase does not carry over. Export a JSON backup from the old install before replacing it.
 
-If you need data recovery across devices, consider:
-1. Export feature (encrypted backup)
-2. Cloud sync with separate encryption
-3. User-managed passphrase (less secure, more complex)
-
-## Code Components
-
-### 1. SecureKeyGenerator.kt
-```kotlin
-// Generates and manages encryption passphrase
-SecureKeyGenerator.getOrGenerateKey(context)
+```bash
+adb pull /data/data/com.snagar.expensetracker/databases/expense_database
+sqlite3 expense_database
+# Expect: file is not a database
 ```
 
-**Features**:
-- Generates 256-bit random passphrase
-- Stores in EncryptedSharedPreferences
-- Uses Android Keystore for additional security
-- Automatic key retrieval on subsequent launches
+Prefs values should also be unreadable:
 
-### 2. ExpenseDatabase.kt
-```kotlin
-// Creates encrypted database instance
-val factory = SupportOpenHelperFactory(passphrase.toByteArray())
-Room.databaseBuilder(...).openHelperFactory(factory).build()
+```bash
+adb pull /data/data/com.snagar.expensetracker/shared_prefs/secure_expense_prefs.xml
 ```
 
-**Features**:
-- Transparent encryption/decryption
-- No changes needed to DAO or queries
-- Standard Room API usage
-- Singleton pattern for performance
+## Production notes already in the build
 
-## Performance Impact
+Release: `isMinifyEnabled = true`, `isShrinkResources = true`, `r8-rules.pro`.
 
-| Operation | Overhead | Notes |
-|-----------|----------|-------|
-| Read | 5-8% | Negligible for most apps |
-| Write | 8-12% | Still very fast |
-| Query | 5-10% | Depends on complexity |
-| Initial Open | +50-100ms | One-time cost |
-
-For a financial tracking app with typical usage patterns, the encryption overhead is **not noticeable** to users.
-
-## Testing Encryption
-
-### Verify Database is Encrypted
-
-1. Run the app and add some expenses
-2. Connect device via ADB
-3. Pull database file:
-   ```bash
-   adb pull /data/data/com.example.expensemanager/databases/expense_database
-   ```
-4. Try to open with standard SQLite tools:
-   ```bash
-   sqlite3 expense_database
-   # Should fail with "file is not a database" error
-   ```
-
-### Verify Passphrase Security
-
-1. Check EncryptedSharedPreferences file:
-   ```bash
-   adb pull /data/data/com.example.expensemanager/shared_prefs/secure_expense_prefs.xml
-   ```
-2. Open the file - values should be encrypted (unreadable)
-
-## Best Practices Implemented
-
-✅ **No Hardcoded Keys**: Passphrase generated at runtime  
-✅ **Hardware Security**: Uses Android Keystore when available  
-✅ **Industry Standard**: AES-256 with SQLCipher  
-✅ **Minimal Attack Surface**: Key stored in secure location  
-✅ **Transparent Usage**: No code changes needed for queries  
-✅ **Error Handling**: Graceful fallback if keystore unavailable  
-
-## Additional Security Recommendations
-
-### For Production Apps:
-
-1. **Enable ProGuard/R8**:
-   ```kotlin
-   buildTypes {
-       release {
-           isMinifyEnabled = true
-           proguardFiles(...)
-       }
-   }
-   ```
-
-2. **Prevent Screenshots** (for sensitive screens):
-   ```kotlin
-   window.setFlags(
-       WindowManager.LayoutParams.FLAG_SECURE,
-       WindowManager.LayoutParams.FLAG_SECURE
-   )
-   ```
-
-3. **Root Detection** (optional):
-   - Use libraries like RootBeer
-   - Warn users on rooted devices
-
-4. **Certificate Pinning** (if using network):
-   - Pin SSL certificates
-   - Prevent man-in-the-middle attacks
-
-5. **Secure Logging**:
-   - Never log sensitive data
-   - Disable logs in production
+Still optional (not implemented): `FLAG_SECURE`, root detection.
 
 ## Troubleshooting
 
-### Database Won't Open
+**Database won’t open** — passphrase mismatch or corruption. Do not generate a new key over an existing file. Restore from JSON backup after a clean install, or clear app data if you accept losing local data.
 
-**Symptom**: App crashes on database access  
-**Cause**: Passphrase mismatch or corruption  
-**Solution**: 
-```kotlin
-// Clear app data or call (dangerous - loses data):
-SecureKeyGenerator.clearPassphrase(context)
-ExpenseDatabase.closeDatabase()
-```
+**Slow queries** — treat like any Room DB: indexes (`date`, `category`, excluded-category name), transactions for bulk import (`TransactionRunner`).
 
-### Performance Issues
-
-**Symptom**: Slow queries  
-**Cause**: Encryption overhead or poor query design  
-**Solution**:
-- Optimize queries (same as non-encrypted)
-- Add indexes to frequently queried columns
-- Use transactions for bulk operations
-
-### Key Storage Failed
-
-**Symptom**: Exception when generating/retrieving key  
-**Cause**: Android Keystore unavailable  
-**Solution**: Code already handles this - falls back to SecureRandom
-
-## Migration from Unencrypted DB
-
-If you have an existing unencrypted database:
-
-1. Export data to JSON/CSV
-2. Clear app data (removes old DB)
-3. Reinstall with encryption enabled
-4. Import data back
-
-Or programmatically:
-```kotlin
-// Backup data from old DB
-// Delete old DB file
-// Create new encrypted DB
-// Restore data
-```
-
-## Security Audit Checklist
-
-- [x] Passphrase is randomly generated (256-bit)
-- [x] Passphrase never hardcoded in source
-- [x] Passphrase stored in EncryptedSharedPreferences
-- [x] Android Keystore used when available
-- [x] SQLCipher properly initialized
-- [x] No logging of sensitive data
-- [x] Database file is actually encrypted
-- [x] No passphrase in version control
-
-## References
-
-- [SQLCipher Official Docs](https://www.zetetic.net/sqlcipher/)
-- [Android Keystore System](https://developer.android.com/training/articles/keystore)
-- [EncryptedSharedPreferences](https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences)
-- [Room Database](https://developer.android.com/training/data-storage/room)
+**Keystore / EncryptedSharedPreferences failure on first launch** — there is no plaintext-prefs fallback. The error should surface rather than silently rotating the key.
 
 ---
 
-**Last Updated**: December 2025  
-**Encryption Version**: SQLCipher 4.5.4  
-**Security Level**: ⭐⭐⭐⭐⭐ (Bank-level)
-
+**Last updated:** October 2026  
+**SQLCipher:** 4.6.1  
+**Room schema:** 7
