@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:744958553341:android:711fa97634bf9176e2e294",
+        "mobilesdk_app_id": "1:744958553341:android:faed4941035893efe2e294",
         "android_client_info": {
-          "package_name": "com.example.expensemanager"
+          "package_name": "com.snagar.expensetracker"
         }
       },
       "oauth_client": [],
