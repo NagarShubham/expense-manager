@@ -6,4 +6,6 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.hilt.android) apply false
+    alias(libs.plugins.google.service) version "4.5.0" apply false
+    alias(libs.plugins.google.firebase.crashlytics) apply false
 }

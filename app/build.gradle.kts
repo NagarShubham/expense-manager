@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.service)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -104,6 +106,10 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
+    // Firebase
+    implementation(platform(libs.google.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
