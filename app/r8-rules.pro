@@ -1,4 +1,4 @@
-# R8 rules for ExpenseManager
+# R8 rules for ExpenseTracker
 # ProGuard-only flags (-optimizationpasses, -dontusemixedcaseclassnames,
 # -dontskipnonpubliclibraryclasses, -verbose) are intentionally omitted —
 # they are no-ops or unsupported under R8.
@@ -39,12 +39,12 @@
 # App encryption classes
 # ============================================================================
 
--keep class com.example.expensemanager.util.SecureKeyGenerator { *; }
--keep class com.example.expensemanager.data.** { *; }
+-keep class com.snagar.expensetracker.util.SecureKeyGenerator { *; }
+-keep class com.snagar.expensetracker.data.** { *; }
 
 # Gson maps backup JSON by field name. Keep the payload type; entities are already
 # covered by data.** above.
--keep class com.example.expensemanager.util.BackupManager$BackupData { *; }
+-keep class com.snagar.expensetracker.util.BackupManager$BackupData { *; }
 
 # ============================================================================
 # Kotlin Coroutines

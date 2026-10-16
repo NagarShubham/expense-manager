@@ -5,14 +5,16 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.service)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
-    namespace = "com.example.expensemanager"
+    namespace = "com.snagar.expensetracker"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.expancemanager"
+        applicationId = "com.snagar.expensetracker"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -65,7 +67,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.api.ApkVariantOutput
-            output.outputFileName = "Expense-${variant.versionName}-${variant.buildType.name}.apk"
+            output.outputFileName = "ExpenseTracker-${variant.versionName}-${variant.buildType.name}.apk"
         }
     }
 }
@@ -104,6 +106,10 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
+    // Firebase
+    implementation(platform(libs.google.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
