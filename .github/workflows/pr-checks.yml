@@ -38,10 +38,8 @@ jobs:
 
       - name: Lint, unit tests, coverage, and debug APK
         run: >
-          ./gradlew --no-daemon --build-cache
-          ktlintCheck lintDebug
-          testDebugUnitTest createDebugUnitTestCoverageReport
-          assembleDebug
+          ./gradlew --no-daemon --build-cache ktlintCheck lintDebug testDebugUnitTest
+          createDebugUnitTestCoverageReport assembleDebug
 
       - name: Upload coverage reports
         if: always()

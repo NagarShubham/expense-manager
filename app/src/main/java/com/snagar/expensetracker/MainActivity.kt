@@ -82,7 +82,10 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    /** Restores a lost auto-backup schedule on launch. Here, not in `Application`, so worker-only wakes skip it. */
+    /**
+     * Restores the 12-hour auto-backup schedule on launch when the toggle is on and
+     * expenses exist. Here, not in `Application`, so worker-only wakes skip it.
+     */
     private fun startAutoBackup() {
         autoBackupStore.ensureScheduled()
     }
