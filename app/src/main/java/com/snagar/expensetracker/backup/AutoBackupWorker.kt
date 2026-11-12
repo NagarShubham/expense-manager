@@ -14,8 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Writes a backup only when the data's content hash differs from the last backup; skips when
- * there are no expenses. [Lazy] deps keep a disabled/unwritable run from opening the database.
+ * Periodic (12h) backup. Writes only when expenses exist and the content hash is not already
+ * stored as a live file; otherwise skips. [Lazy] deps keep a disabled/unwritable run from
+ * opening the database until a real backup is attempted.
  */
 @HiltWorker
 internal class AutoBackupWorker
@@ -50,8 +51,13 @@ internal class AutoBackupWorker
         private suspend fun runBackup(state: AutoBackupStore.State): Result {
             val manager = backupManager.get()
             val snapshot = manager.loadSnapshot()
-            // An empty backup would push a real one out of the retention window.
-            if (snapshot.expenses.isEmpty()) return Result.success()
+            // Empty list: never write a file (and never open retention) — scheduling is
+            // cancelled from AutoBackupStore when the count hits zero.
+            if (snapshot.expenses.isEmpty()) {
+                Log.d(LOG_TAG, "Skipping auto-backup: no expenses")
+                store.cancelIfStillEmpty()
+                return Result.success()
+            }
 
             val signature = manager.contentSignature(
                 snapshot.expenses,
@@ -59,8 +65,9 @@ internal class AutoBackupWorker
                 snapshot.budgetExcludedCategories,
                 snapshot.categories
             )
-            // The user may have deleted the last file, so existence is checked too.
+            // Already backed up (same content and the file is still on disk).
             if (signature == state.contentSignature && fileStore.exists(state.lastBackupUri)) {
+                Log.d(LOG_TAG, "Skipping auto-backup: data already backed up")
                 return Result.success()
             }
             // The feature may have been switched off during the read.
